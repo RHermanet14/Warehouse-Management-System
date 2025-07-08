@@ -8,11 +8,11 @@ const Profile = () => {
     return (
         <ThemedView style={styles.container}>
             <ThemedText title={true} style={styles.heading}>
-                Your Email
+                Your Account
             </ThemedText>
             <Spacer/>
 
-            <ThemedText style={{}}>Time to start reading some books...</ThemedText>
+            <ThemedText style={{}}>Switch to a list of options</ThemedText>
             <Spacer/>
         </ThemedView>
     )

@@ -11,8 +11,9 @@ export default function App() {
         <ThemedText style={styles.text} title={true}>Warehouse Management System</ThemedText>
       </ThemedView>
       <ThemedView style={styles.otherContainer}>
-        <Link href="/register" style={styles.link}>Go to Register</Link>
-        <Link href="/login" style={styles.link}>Go to Login</Link>
+        <Link href="/login" style={styles.link}>
+          <ThemedText>Login</ThemedText>
+        </Link>
         <Link href="/profile" style={styles.link}>
           <ThemedText>Dashboard</ThemedText>
         </Link>
@@ -25,5 +26,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 50 },
   otherContainer: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
   text: { fontSize: 32, textAlign: 'center', fontWeight: 'bold' },
-  link: { fontSize: 20, color: '#6849a7', marginVertical: 8 }
+  link: { fontSize: 20, marginVertical: 8 }
 });

@@ -39,7 +39,7 @@ const Search = () => {
             Alert.alert("Not Found", "No item found with this barcode ID");
         } catch (error) {
             console.log(error);
-            Alert.alert("Error", "Failed to search for item");
+            Alert.alert("Error", error.message);
         } finally {
             setIsLoading(false);
         }

@@ -12,7 +12,7 @@ import ThemedButton from '../../components/ThemedButton'
 
 const login = () => {
     const handleSubmit = () => {
-        console.log('login form submitted')
+        console.log('TODO: Login')
     }
   return (
     <ThemedView style = {styles.container}>
@@ -25,13 +25,6 @@ const login = () => {
         <ThemedButton onPress={handleSubmit} style={{}}>
             <Text style={{color:'#f2f2f2'}}>Login</Text>
         </ThemedButton>
-
-        <Spacer height={100}/>
-        <Link href='/register'>
-            <ThemedText style= {{textAlign: 'center'}}>
-                Register instead
-            </ThemedText>
-        </Link>
     </ThemedView>
   )
 }

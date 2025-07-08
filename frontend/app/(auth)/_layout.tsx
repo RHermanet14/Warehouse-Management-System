@@ -9,11 +9,11 @@ export default function AuthLayout() {
     
     return (
         <>
-            <StatusBar barStyle="default"/>
             <Stack screenOptions={{
                     headerStyle: { backgroundColor: theme.navBackground},
                     headerTintColor: theme.title,
                     animation: "none",
+                    headerShown: false,
             }}/>
         </>
     )

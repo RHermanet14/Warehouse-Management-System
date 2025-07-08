@@ -53,7 +53,7 @@ export default function App() {
         Alert.alert('Error', 'Barcode not found in database', [{text: 'Scan Again', onPress: handleClear,}]);
         return;
       } else {
-        //console.log(res.data.item);
+        console.log(res.data.item);
         setBarcode(res.data.item);
       }
     } catch (error: any) {

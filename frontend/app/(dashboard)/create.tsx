@@ -81,27 +81,27 @@ const Create = () => {
             Alert.alert("Error", "Please enter or scan a barcode ID");
             return;
         }
-
+        const quantity = parseInt(formData.total_quantity);
+/*
         if (!formData.name.trim()) {
             Alert.alert("Error", "Please enter an item name");
             return;
         }
 
-        const quantity = parseInt(formData.total_quantity);
         if (isNaN(quantity) || quantity <= 0) {
             Alert.alert("Error", "Please enter a valid quantity");
             return;
         }
-
+*/
         setIsLoading(true);
         try {
             // Prepare location data
             const primaryLocation = formData.primary_location.trim() && formData.primary_quantity.trim() 
-                ? { location: formData.primary_location, quantity: parseInt(formData.primary_quantity) }
+                ? { "location": formData.primary_location, "quantity": parseInt(formData.primary_quantity) }
                 : null;
             
             const secondaryLocation = formData.secondary_location.trim() && formData.secondary_quantity.trim()
-                ? { location: formData.secondary_location, quantity: parseInt(formData.secondary_quantity) }
+                ? { "location": formData.secondary_location, "quantity": parseInt(formData.secondary_quantity) }
                 : null;
 
             const response = await axios.post(`${BACKEND_URL}/items`, {
@@ -109,12 +109,15 @@ const Create = () => {
                 barcode_type: formData.barcode_type,
                 name: formData.name,
                 description: formData.description || null,
-                total_quantity: quantity,
                 primary_location: primaryLocation,
-                secondary_location: secondaryLocation
+                secondary_location: secondaryLocation,
+                total_quantity: quantity
             });
-            console.log(response.data.item);
+            console.log(response.data);
             if (response.status === 200) {
+              Alert.alert("Success", "Item quantity updated successfully!", [{text: "Update Another", onPress: handleClear}]);
+              return;
+            } else if (response.status === 201) {
               Alert.alert("Success", "Item created successfully!", [{text: "Create Another", onPress: handleClear}]);
               return;
             } else {
@@ -189,7 +192,7 @@ const Create = () => {
                     </ThemedText>
                     <Spacer />
                     {/* Barcode Section */}
-                    <ThemedText style={styles.sectionTitle}>Barcode Information *</ThemedText>
+                    <ThemedText style={styles.sectionTitle}>Barcode Information (Required)</ThemedText>
                     
                     <TextInput
                         style={[inputStyles.primary]}
@@ -236,7 +239,7 @@ const Create = () => {
 
                     <TextInput
                         style={[inputStyles.primary, styles.textArea]}
-                        placeholder="Description (optional)"
+                        placeholder="Description"
                         placeholderTextColor="#666"
                         value={formData.description}
                         onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
@@ -248,7 +251,7 @@ const Create = () => {
 
                     <TextInput
                         style={[inputStyles.primary]}
-                        placeholder="Total Quantity (optional)"
+                        placeholder="Total Quantity"
                         placeholderTextColor="#666"
                         value={formData.total_quantity}
                         onChangeText={(text) => setFormData(prev => ({ ...prev, total_quantity: text }))}
@@ -257,7 +260,7 @@ const Create = () => {
                     <Spacer height={20} />
 
                     {/* Location Information */}
-                    <ThemedText style={styles.sectionTitle}>Location Information (Optional)</ThemedText>
+                    <ThemedText style={styles.sectionTitle}>Location Information</ThemedText>
                     
                     <ThemedText style={styles.subsectionTitle}>Primary Location</ThemedText>
                     <TextInput
