@@ -1,15 +1,29 @@
 # Node modules
 node_modules/
 */node_modules/
+frontend-desktop/node_modules
 
 # Build output
 dist/
 build/
+frontend-desktop/dist
+frontend-desktop/dist-ssr
+
+# Logs
 *.log
+logs
+frontend-desktop/logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+frontend-desktop/*.log
 
 # Environment files
 .env
 .env.*
+*.local
 
 # OS files
 .DS_Store
@@ -17,7 +31,14 @@ Thumbs.db
 
 # Editor files
 .vscode/
+.vscode/*
+!.vscode/extensions.json
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 *.swp
 *.swo
 *~
@@ -29,9 +50,6 @@ Thumbs.db
 # Misc
 coverage/
 *.tgz
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Ignore local database files
 *.sqlite

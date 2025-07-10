@@ -42,7 +42,14 @@ app.put('/items', async (req, res) => {
       return res.status(404).json({ error: 'Item not found' });
     }
     const updated = await pool.query(
-      'UPDATE item SET barcode_type = $1, name = $2, description = $3, primary_location = $4, secondary_location = $5, total_quantity = $6 WHERE barcode_id = $7 RETURNING *',
+      `UPDATE item SET
+         barcode_type = COALESCE($1, barcode_type),
+         name = COALESCE($2, name),
+         description = COALESCE($3, description),
+         primary_location = COALESCE($4, primary_location),
+         secondary_location = COALESCE($5, secondary_location),
+         total_quantity = COALESCE($6, total_quantity)
+         WHERE barcode_id = $7 RETURNING *`,
       [barcode_type, name, description, primary_location, secondary_location, total_quantity, barcode_id]
     );
     return res.status(200).json(updated.rows[0]);
