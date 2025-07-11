@@ -52,6 +52,7 @@ BEGIN
     VALUES ('817894024803', 'ean13', 'Sphere Push Pins', ROW(60, 'Bedroom')::LOCATION, 60);
 
     INSERT INTO item (barcode_id, barcode_type) VALUES ('1', 'ean13');
+    INSERT INTO item (barcode_id, barcode_type) VALUES ('2', 'ean13');
 
   END IF;
 END$$;

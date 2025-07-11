@@ -29,6 +29,7 @@ const Search = () => {
             const res = await axios.get(`${BACKEND_URL}/items?barcode_id=${barcodeId}`);
             console.log(res.data.item);
                 if (res.data.item) {
+                    console.log("successful search");
                     setItem(res.data.item);
                     setIsLoading(false);
                     return;
