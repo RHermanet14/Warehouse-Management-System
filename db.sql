@@ -47,6 +47,21 @@ BEGIN
       PRIMARY KEY (barcode_id)
     );
 
+    -- 1. Orders table
+  CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    order_date TIMESTAMP DEFAULT NOW(),
+    -- add other fields as needed (customer_id, status, etc.)
+  );
+
+  -- 2. Order items table (join table)
+  CREATE TABLE order_items (
+    order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,
+    barcode_id VARCHAR(32) REFERENCES item(barcode_id),
+    quantity INT NOT NULL,
+    PRIMARY KEY (order_id, barcode_id)
+  );
+
     -- Insert initial data
     INSERT INTO item (barcode_id, barcode_type, name, primary_location, total_quantity) 
     VALUES ('817894024803', 'ean13', 'Sphere Push Pins', ROW(60, 'Bedroom')::LOCATION, 60);

@@ -29,7 +29,7 @@ app.get('/items', async (req, res) => {
 });
 
 app.put('/items', async (req, res) => {
-  const { barcode_id, barcode_type, name, description, primary_location, secondary_location, total_quantity } = req.body;
+  const { barcode_id, name, description, primary_location, secondary_location, total_quantity } = req.body;
   if (!barcode_id) {
     return res.status(400).json({ error: 'barcode_id is required' });
   }
@@ -41,19 +41,33 @@ app.put('/items', async (req, res) => {
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Item not found' });
     }
+
+    const toIntOrNULL = (val: string | number | null | undefined) => {
+      if (val === undefined || val === null || val === '') return null;
+      return parseInt(String(val), 10);
+    };
     const updated = await pool.query(
       `UPDATE item SET
-         barcode_type = COALESCE($1, barcode_type),
-         name = COALESCE($2, name),
-         description = COALESCE($3, description),
-         primary_location = COALESCE($4, primary_location),
-         secondary_location = COALESCE($5, secondary_location),
-         total_quantity = COALESCE($6, total_quantity)
-         WHERE barcode_id = $7 RETURNING *`,
-      [barcode_type, name, description, primary_location, secondary_location, total_quantity, barcode_id]
+         name = $1,
+         description = $2,
+         primary_location = ROW($3, $4)::LOCATION,
+         secondary_location = ROW($5, $6)::LOCATION,
+         total_quantity = $7
+         WHERE barcode_id = $8 RETURNING *`,
+      [
+        name,
+        description,
+        toIntOrNULL(primary_location?.quantity),
+        primary_location?.location ?? null,
+        toIntOrNULL(secondary_location?.quantity),
+        secondary_location?.location ?? null,
+        toIntOrNULL(total_quantity),
+        barcode_id
+      ]
     );
     return res.status(200).json(updated.rows[0]);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to update item', details: err });
   }
 });
@@ -115,6 +129,32 @@ app.post('/items', async (req, res) => {
     }
   } catch (err) {
     res.status(500).json({ error: 'Failed to insert/update item', details: err });
+  }
+});
+
+//post orders
+app.post('/orders', async (req, res) => {
+  const { barcode_id, barcode_type, name, description, primary_location, secondary_location, total_quantity } = req.body;
+  if (!barcode_id) {
+    return res.status(400).json({ error: 'barcode_id is required' });
+  }
+  try {
+    
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create order', details: err });
+  }
+});
+
+//get orders
+app.post('/orders', async (req, res) => {
+  const { barcode_id, barcode_type, name, description, primary_location, secondary_location, total_quantity } = req.body;
+  if (!barcode_id) {
+    return res.status(400).json({ error: 'barcode_id is required' });
+  }
+  try {
+    
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get order', details: err });
   }
 });
 
