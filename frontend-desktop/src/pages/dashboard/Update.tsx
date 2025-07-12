@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import './Update.css';
 
 export default function Update() {
   const [barcodeId, setBarcodeId] = useState('');
@@ -82,31 +83,31 @@ export default function Update() {
   };
 
   return (
-    <div style={{ maxWidth: 500, margin: '40px auto', padding: 24, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: 24, color: 'black' }}>Update Item Information</h2>
-      <form onSubmit={handleFetch} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+    <div className="update-container">
+      <h2 className="update-title">Update Item Information</h2>
+      <form onSubmit={handleFetch} className="update-fetch-form">
         <input
           type="text"
           placeholder="Enter Barcode ID"
           value={barcodeId}
           onChange={e => setBarcodeId(e.target.value)}
-          style={{ flex: 1, padding: 8, fontSize: 16, borderRadius: 4, border: '1px solid #ccc' }}
+          className="update-input"
         />
-        <button type="submit" disabled={loading} style={{ padding: 8, fontSize: 16, borderRadius: 4, background: '#1976d2', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>
+        <button type="submit" disabled={loading} className="update-btn">
           Fetch
         </button>
       </form>
-      {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
-      {message && <div style={{ color: 'green', marginBottom: 12 }}>{message}</div>}
+      {error && <div className="update-error">{error}</div>}
+      {message && <div className="update-success">{message}</div>}
       {item && (
-        <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <form onSubmit={handleUpdate} className="update-form">
           <input
             type="text"
             name="name"
             placeholder="Name"
             value={form.name}
             onChange={handleChange}
-            style={{ padding: 8, fontSize: 16, borderRadius: 4, border: '1px solid #ccc' }}
+            className="update-input"
           />
           <input
             type="text"
@@ -114,7 +115,7 @@ export default function Update() {
             placeholder="Description"
             value={form.description}
             onChange={handleChange}
-            style={{ padding: 8, fontSize: 16, borderRadius: 4, border: '1px solid #ccc' }}
+            className="update-input"
           />
           <input
             type="number"
@@ -122,7 +123,7 @@ export default function Update() {
             placeholder="Total Quantity"
             value={form.total_quantity}
             onChange={handleChange}
-            style={{ padding: 8, fontSize: 16, borderRadius: 4, border: '1px solid #ccc' }}
+            className="update-input"
           />
           <input
             type="number"
@@ -130,7 +131,7 @@ export default function Update() {
             placeholder="Primary Location Quantity"
             value={form.primary_location_quantity}
             onChange={handleChange}
-            style={{ padding: 8, fontSize: 16, borderRadius: 4, border: '1px solid #ccc' }}
+            className="update-input"
           />
           <input
             type="text"
@@ -138,7 +139,7 @@ export default function Update() {
             placeholder="Primary Location"
             value={form.primary_location_location}
             onChange={handleChange}
-            style={{ padding: 8, fontSize: 16, borderRadius: 4, border: '1px solid #ccc' }}
+            className="update-input"
           />
           <input
             type="number"
@@ -146,7 +147,7 @@ export default function Update() {
             placeholder="Secondary Location Quantity"
             value={form.secondary_location_quantity}
             onChange={handleChange}
-            style={{ padding: 8, fontSize: 16, borderRadius: 4, border: '1px solid #ccc' }}
+            className="update-input"
           />
           <input
             type="text"
@@ -154,9 +155,9 @@ export default function Update() {
             placeholder="Secondary Location"
             value={form.secondary_location_location}
             onChange={handleChange}
-            style={{ padding: 8, fontSize: 16, borderRadius: 4, border: '1px solid #ccc' }}
+            className="update-input"
           />
-          <button type="submit" disabled={loading} style={{ padding: 10, fontSize: 16, borderRadius: 4, background: '#43a047', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>
+          <button type="submit" disabled={loading} className="update-btn update-btn-success">
             Update Item
           </button>
         </form>
