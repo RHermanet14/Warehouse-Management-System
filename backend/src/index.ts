@@ -1,6 +1,7 @@
 import express from 'express';
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 dotenv.config();
 
@@ -10,6 +11,7 @@ const port = process.env.PORT || 3000;
 // Set up PostgreSQL connection pool
 const pool = new Pool();
 app.use(express.json());
+app.use(cors());
 
 // GET /items - retrieve a specific item from the database
 app.get('/items', async (req, res) => {
@@ -134,19 +136,41 @@ app.post('/items', async (req, res) => {
 
 //post orders
 app.post('/orders', async (req, res) => {
-  const { barcode_id, barcode_type, name, description, primary_location, secondary_location, total_quantity } = req.body;
-  if (!barcode_id) {
-    return res.status(400).json({ error: 'barcode_id is required' });
+  const { items } = req.body; // items: [{ barcode_id, quantity }, ...]
+  console.log(res);
+  console.log(items);
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Order must contain at least one item.' });
   }
+  const client = await pool.connect();
   try {
-    
+    await client.query('BEGIN');
+    // 1. Insert new order
+    const orderResult = await client.query(
+      'INSERT INTO orders DEFAULT VALUES RETURNING order_id, order_date'
+    );
+    const order_id = orderResult.rows[0].order_id;
+
+    // 2. Insert each item into order_items
+    for (const item of items) {
+      await client.query(
+        'INSERT INTO order_items (order_id, barcode_id, quantity) VALUES ($1, $2, $3)',
+        [order_id, item.barcode_id, item.quantity]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json({ order_id, order_date: orderResult.rows[0].order_date });
   } catch (err) {
+    await client.query('ROLLBACK');
     res.status(500).json({ error: 'Failed to create order', details: err });
+  } finally {
+    client.release();
   }
 });
 
 //get orders
-app.post('/orders', async (req, res) => {
+app.get('/orders', async (req, res) => {
   const { barcode_id, barcode_type, name, description, primary_location, secondary_location, total_quantity } = req.body;
   if (!barcode_id) {
     return res.status(400).json({ error: 'barcode_id is required' });

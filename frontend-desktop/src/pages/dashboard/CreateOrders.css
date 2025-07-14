@@ -1,0 +1,93 @@
+.create-orders-container {
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.create-orders-title {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.create-orders-add-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.create-orders-input {
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.create-orders-btn {
+  padding: 8px 10px;
+  font-size: 16px;
+  border-radius: 4px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.create-orders-btn-success {
+  width: 100%;
+  padding: 12px;
+  background: #43a047;
+}
+
+.create-orders-error {
+  color: black;
+  margin-bottom: 12px;
+}
+
+.create-orders-success {
+  color: black;
+  margin-bottom: 12px;
+}
+
+.create-orders-items {
+  margin-bottom: 16px;
+}
+
+.create-orders-items-title {
+  margin: 0 0 10px 0;
+  color: #111;
+}
+
+.create-orders-items-list {
+  list-style: none;
+  padding: 0;
+}
+
+.create-orders-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.create-orders-item-barcode {
+  flex: 2;
+  color: #111;
+}
+
+.create-orders-item-quantity {
+  flex: 1;
+  color: #111;
+}
+
+.create-orders-remove-btn {
+  margin-left: 8px;
+  background: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+} 
