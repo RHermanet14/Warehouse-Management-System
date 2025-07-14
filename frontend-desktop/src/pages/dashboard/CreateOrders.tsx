@@ -37,9 +37,7 @@ export default function CreateOrders() {
     }
     setLoading(true);
     try {
-      console.log(items);
       await axios.post('http://localhost:3000/orders', { items });
-      console.log("Does it get to here?");
       setMessage('Order created successfully!');
       setItems([]);
     } catch (err: any) {

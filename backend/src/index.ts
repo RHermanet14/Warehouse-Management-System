@@ -171,14 +171,35 @@ app.post('/orders', async (req, res) => {
 
 //get orders
 app.get('/orders', async (req, res) => {
-  const { barcode_id, barcode_type, name, description, primary_location, secondary_location, total_quantity } = req.body;
-  if (!barcode_id) {
-    return res.status(400).json({ error: 'barcode_id is required' });
-  }
   try {
-    
+    // Fetch all orders and their items
+    const result = await pool.query(`
+      SELECT o.order_id, o.order_date, oi.barcode_id, oi.quantity
+      FROM orders o
+      LEFT JOIN order_items oi ON o.order_id = oi.order_id
+      ORDER BY o.order_id DESC, oi.barcode_id
+    `);
+    // Group items by order_id
+    const ordersMap: Record<string, { order_id: number, order_date: string, items: Array<{ barcode_id: string, quantity: number }> }> = {};
+    for (const row of result.rows) {
+      if (!ordersMap[row.order_id]) {
+        ordersMap[row.order_id] = {
+          order_id: row.order_id,
+          order_date: row.order_date,
+          items: []
+        };
+      }
+      if (row.barcode_id) {
+        ordersMap[row.order_id].items.push({
+          barcode_id: row.barcode_id,
+          quantity: row.quantity
+        });
+      }
+    }
+    const orders = Object.values(ordersMap);
+    res.status(200).json(orders);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to get order', details: err });
+    res.status(500).json({ error: 'Failed to get orders', details: err });
   }
 });
 

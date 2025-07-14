@@ -1,0 +1,96 @@
+/* Container for the orders page */
+.view-orders-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.view-orders-title {
+  text-align: center;
+  margin-bottom: 24px;
+  color: black;
+  font-weight: bold;
+}
+
+.view-orders-loading,
+.view-orders-error,
+.view-orders-empty {
+  color: black;
+  margin-bottom: 12px;
+}
+
+.view-orders-error {
+  color: red;
+}
+
+.view-orders-list {
+  list-style: none;
+  padding: 0;
+}
+
+.view-orders-list-item {
+  margin-bottom: 18px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.view-orders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.view-orders-header-info {
+  display: flex;
+  align-items: center;
+}
+
+.view-orders-order-id {
+  color: black;
+  font-weight: bold;
+}
+
+.view-orders-order-date {
+  color: black;
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.view-orders-toggle-btn {
+  margin-left: 16px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid #1976d2;
+  background: #fff;
+  color: #1976d2;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.view-orders-toggle-btn.active {
+  background: #1976d2;
+  color: #fff;
+}
+
+.view-orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.view-orders-table th {
+  text-align: center;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 4px;
+  color: black;
+}
+
+.view-orders-table td {
+  padding: 4px 0;
+  color: black;
+  text-align: center;
+} 
