@@ -36,6 +36,17 @@ BEGIN
       PRIMARY KEY (account_id)
     );
 
+    -- Insert into account table
+    INSERT INTO account (email, password, account_type)
+    VALUES ('user@example.com', 'securepassword', 'admin');
+
+    -- Insert into employee table
+    INSERT INTO employee (
+      account_id, first_name, last_name, email, phone_number, address, city, state, zip_code, position
+    ) VALUES (
+      123456, 'John', 'Doe', 'user@example.com', '555-1234', '123 Main St', 'Anytown', 'CA', '12345', 'Manager'
+    );
+
     CREATE TABLE item (
       barcode_id VARCHAR(32),
       barcode_type VARCHAR(32),
