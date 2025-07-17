@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './ManageAccounts.css';
+import { useLocation } from 'react-router-dom';
 
 interface Employee {
   account_id: number;
@@ -22,6 +23,7 @@ export default function ManageAccounts() {
   const [editForm, setEditForm] = useState<Partial<Employee>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const location = useLocation();
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -37,7 +39,7 @@ export default function ManageAccounts() {
       }
     };
     fetchEmployees();
-  }, []);
+  }, [location]);
 
   const startEdit = (emp: Employee) => {
     setEditingId(emp.account_id);
@@ -58,9 +60,11 @@ export default function ManageAccounts() {
     if (!editingId) return;
     try {
       await axios.put(`http://localhost:3000/employees/${editingId}`, editForm);
-      setEmployees(prev => prev.map(emp => emp.account_id === editingId ? { ...emp, ...editForm } as Employee : emp));
       setEditingId(null);
       setEditForm({});
+      // Fetch fresh data from backend after save
+      const res = await axios.get('http://localhost:3000/employees');
+      setEmployees(res.data as Employee[]);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error saving changes');
     }
