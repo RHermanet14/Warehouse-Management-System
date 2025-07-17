@@ -203,6 +203,38 @@ app.get('/orders', async (req, res) => {
   }
 });
 
+// GET /orders/by-locations?locations=loc1,loc2,...
+app.get('/orders/by-locations', async (req, res) => {
+  const locationsParam = req.query.locations;
+  const locations = String(locationsParam).split(',').map(l => l.trim()).filter(Boolean);
+  console.log('[by-locations] Parsed locations:', locations);
+  try {
+    const result = await pool.query(`
+      SELECT o.order_id,
+             array_agg(DISTINCT l.location ORDER BY l.location) as order_locations
+      FROM orders o
+      JOIN order_items oi ON o.order_id = oi.order_id
+      JOIN item i ON oi.barcode_id = i.barcode_id
+      LEFT JOIN LATERAL (
+        VALUES ((i.primary_location).location), ((i.secondary_location).location)
+      ) AS l(location) ON TRUE
+      WHERE l.location IS NOT NULL
+      GROUP BY o.order_id
+    `);
+    const selectedSet = new Set(locations.map(l => l.toLowerCase()));
+    const found = result.rows.find(row =>
+      (row.order_locations as string[]).every((loc: string) => selectedSet.has(loc.toLowerCase()))
+    );
+    if (!found) {
+      return res.status(404).json({ error: 'No orders found for selected locations' });
+    }
+    return res.status(200).json({ order_id: found.order_id });
+  } catch (err) {
+    console.error('[by-locations] Error:', err);
+    res.status(500).json({ error: 'Failed to get order by locations', details: err });
+  }
+});
+
 // GET /employees - list employees with account info (if any)
 app.get('/employees', async (req, res) => {
   try {

@@ -14,6 +14,9 @@ export default function App() {
         <Link href="/login" style={styles.link}>
           <ThemedText>Login</ThemedText>
         </Link>
+        <Link href="/order" style={styles.link}>
+          <ThemedText>Fulfill Order</ThemedText>
+        </Link>
         <Link href="/profile" style={styles.link}>
           <ThemedText>Dashboard</ThemedText>
         </Link>
