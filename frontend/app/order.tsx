@@ -15,8 +15,8 @@ const LOCATIONS = [
   'Fridge',
   'Basement',
   'Bedroom',
-  'one',
-  'word',
+  'No',
+  'Where',
 ];
 
 interface Item {
@@ -119,6 +119,10 @@ export default function OrderScreen() {
       Alert.alert('Pick at least 1 item.');
       return;
     }
+    if (picked > remainingQty) {
+      Alert.alert('Invalid Quantity', 'You cannot pick more than the remaining quantity.');
+      return;
+    }
     if (picked < remainingQty) {
       // Partial pick, update picked_quantity and stay on item
       try {
@@ -127,7 +131,10 @@ export default function OrderScreen() {
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ picked_quantity: picked }),
+            body: JSON.stringify({ 
+              picked_quantity: picked,
+              picked_location: locationBarcode 
+            }),
           }
         );
         // Re-fetch order items
@@ -150,7 +157,10 @@ export default function OrderScreen() {
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ picked_quantity: picked }),
+          body: JSON.stringify({ 
+            picked_quantity: picked,
+            picked_location: locationBarcode 
+          }),
         }
       );
       // Re-fetch order items

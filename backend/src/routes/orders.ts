@@ -129,42 +129,79 @@ router.get('/:order_id/items', async (req, res) => {
 // PUT /orders/:order_id/items/:barcode_id - update picked_quantity for an order item
 router.put('/:order_id/items/:barcode_id', async (req, res) => {
   const { order_id, barcode_id } = req.params;
-  const { picked_quantity } = req.body;
+  const { picked_quantity, picked_location } = req.body;
+  
   if (typeof picked_quantity !== 'number' || picked_quantity <= 0) {
     return res.status(400).json({ error: 'picked_quantity must be a positive number' });
   }
+  if (!picked_location || typeof picked_location !== 'string') {
+    return res.status(400).json({ error: 'picked_location is required and must be a string' });
+  }
   try {
-    const result = await pool.query(
-      `UPDATE order_items
-       SET picked_quantity = picked_quantity + $1
-       WHERE order_id = $2 AND barcode_id = $3
-       RETURNING *`,
-      [picked_quantity, order_id, barcode_id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Order item not found' });
-    }
+    // Start a transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    // Check if all items in the order are fully picked
-    const orderCompletionCheck = await pool.query(`
-      SELECT 
-        COUNT(*) as total_items,
-        COUNT(CASE WHEN oi.quantity <= oi.picked_quantity THEN 1 END) as completed_items
-      FROM order_items oi
-      WHERE oi.order_id = $1
-    `, [order_id]);
-
-    const { total_items, completed_items } = orderCompletionCheck.rows[0];
-    
-    // If all items are completed, mark order as completed
-    if (total_items > 0 && total_items == completed_items) {
-      await pool.query(
-        'UPDATE orders SET status = $1 WHERE order_id = $2',
-        ['completed', order_id]
+      // Update picked_quantity in order_items
+      const result = await client.query(
+        `UPDATE order_items
+         SET picked_quantity = picked_quantity + $1
+         WHERE order_id = $2 AND barcode_id = $3
+         RETURNING *`,
+        [picked_quantity, order_id, barcode_id]
       );
-    }
+      
+      if (result.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Order item not found' });
+      }
 
-    res.status(200).json(result.rows[0]);
+      // Update the correct location quantity and total_quantity
+      await client.query(`
+        UPDATE item
+        SET
+          primary_location = CASE
+            WHEN (primary_location).location = $1
+              THEN ROW((primary_location).quantity - $2, (primary_location).location)::LOCATION
+            ELSE primary_location
+          END,
+          secondary_location = CASE
+            WHEN (secondary_location).location = $1
+              THEN ROW((secondary_location).quantity - $2, (secondary_location).location)::LOCATION
+            ELSE secondary_location
+          END,
+          total_quantity = total_quantity - $2
+        WHERE barcode_id = $3
+      `, [picked_location, picked_quantity, barcode_id]);
+
+      // Check if all items in the order are fully picked
+      const orderCompletionCheck = await client.query(`
+        SELECT 
+          COUNT(*) as total_items,
+          COUNT(CASE WHEN oi.quantity <= oi.picked_quantity THEN 1 END) as completed_items
+        FROM order_items oi
+        WHERE oi.order_id = $1
+      `, [order_id]);
+
+      const { total_items, completed_items } = orderCompletionCheck.rows[0];
+      
+      // If all items are completed, mark order as completed
+      if (total_items > 0 && total_items == completed_items) {
+        await client.query(
+          'UPDATE orders SET status = $1 WHERE order_id = $2',
+          ['completed', order_id]
+        );
+      }
+
+      await client.query('COMMIT');
+      res.status(200).json(result.rows[0]);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     res.status(500).json({ error: 'Failed to update picked quantity', details: err });
   }
