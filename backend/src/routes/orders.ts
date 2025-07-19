@@ -70,7 +70,6 @@ router.get('/', async (req, res) => {
 router.get('/by-locations', async (req, res) => {
   const locationsParam = req.query.locations;
   const locations = String(locationsParam).split(',').map(l => l.trim()).filter(Boolean);
-  console.log('[by-locations] Parsed locations:', locations);
   try {
     const result = await pool.query(`
       SELECT o.order_id,
@@ -82,6 +81,7 @@ router.get('/by-locations', async (req, res) => {
         VALUES ((i.primary_location).location), ((i.secondary_location).location)
       ) AS l(location) ON TRUE
       WHERE l.location IS NOT NULL
+        AND o.status = 'pending'
       GROUP BY o.order_id
     `);
     const selectedSet = new Set(locations.map(l => l.toLowerCase()));
@@ -89,12 +89,102 @@ router.get('/by-locations', async (req, res) => {
       (row.order_locations as string[]).every((loc: string) => selectedSet.has(loc.toLowerCase()))
     );
     if (!found) {
-      return res.status(404).json({ error: 'No orders found for selected locations' });
+      return res.status(404).json({ error: 'No pending orders found for selected locations' });
     }
+    
+    // Mark the order as in_progress when starting fulfillment
+    await pool.query(
+      'UPDATE orders SET status = $1 WHERE order_id = $2',
+      ['in_progress', found.order_id]
+    );
+    
     return res.status(200).json({ order_id: found.order_id });
   } catch (err) {
     console.error('[by-locations] Error:', err);
     res.status(500).json({ error: 'Failed to get order by locations', details: err });
+  }
+});
+
+// GET /orders/:order_id/items - get all items for an order
+router.get('/:order_id/items', async (req, res) => {
+  const { order_id } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT i.barcode_id, i.name, i.description, oi.quantity, oi.picked_quantity,
+             (i.primary_location).location as primary_location,
+             (i.primary_location).quantity as primary_quantity,
+             (i.secondary_location).location as secondary_location,
+             (i.secondary_location).quantity as secondary_quantity
+      FROM order_items oi
+      JOIN item i ON oi.barcode_id = i.barcode_id
+      WHERE oi.order_id = $1
+      ORDER BY i.name
+    `, [order_id]);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch order items', details: err });
+  }
+});
+
+// PUT /orders/:order_id/items/:barcode_id - update picked_quantity for an order item
+router.put('/:order_id/items/:barcode_id', async (req, res) => {
+  const { order_id, barcode_id } = req.params;
+  const { picked_quantity } = req.body;
+  if (typeof picked_quantity !== 'number' || picked_quantity <= 0) {
+    return res.status(400).json({ error: 'picked_quantity must be a positive number' });
+  }
+  try {
+    const result = await pool.query(
+      `UPDATE order_items
+       SET picked_quantity = picked_quantity + $1
+       WHERE order_id = $2 AND barcode_id = $3
+       RETURNING *`,
+      [picked_quantity, order_id, barcode_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Order item not found' });
+    }
+
+    // Check if all items in the order are fully picked
+    const orderCompletionCheck = await pool.query(`
+      SELECT 
+        COUNT(*) as total_items,
+        COUNT(CASE WHEN oi.quantity <= oi.picked_quantity THEN 1 END) as completed_items
+      FROM order_items oi
+      WHERE oi.order_id = $1
+    `, [order_id]);
+
+    const { total_items, completed_items } = orderCompletionCheck.rows[0];
+    
+    // If all items are completed, mark order as completed
+    if (total_items > 0 && total_items == completed_items) {
+      await pool.query(
+        'UPDATE orders SET status = $1 WHERE order_id = $2',
+        ['completed', order_id]
+      );
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update picked quantity', details: err });
+  }
+});
+
+// PUT /orders/:order_id/reset - set order status back to pending
+router.put('/:order_id/reset', async (req, res) => {
+  const { order_id } = req.params;
+  try {
+    // Only reset if not completed
+    const result = await pool.query(
+      "UPDATE orders SET status = 'pending' WHERE order_id = $1 AND status = 'in_progress'",
+      [order_id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(400).json({ error: 'Order not in progress or already completed' });
+    }
+    res.status(200).json({ message: 'Order reset to pending' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reset order', details: err });
   }
 });
 

@@ -62,7 +62,8 @@ BEGIN
   CREATE TABLE orders (
     order_id SERIAL PRIMARY KEY,
     order_date TIMESTAMP DEFAULT NOW(),
-    -- add other fields as needed (customer_id, status, etc.)
+    status VARCHAR(20) DEFAULT 'pending' NOT NULL,
+    CONSTRAINT valid_status CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled'))
   );
 
   -- 2. Order items table (join table)
@@ -70,6 +71,7 @@ BEGIN
     order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,
     barcode_id VARCHAR(32) REFERENCES item(barcode_id),
     quantity INT NOT NULL,
+    picked_quantity INT NOT NULL DEFAULT 0,
     PRIMARY KEY (order_id, barcode_id)
   );
 
