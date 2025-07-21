@@ -1,0 +1,139 @@
+.update-container {
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.update-title {
+  text-align: center;
+  margin-bottom: 24px;
+  color: black;
+}
+
+.update-fetch-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.update-input {
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.update-btn {
+  padding: 8px 10px;
+  font-size: 16px;
+  border-radius: 4px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.update-btn-success {
+  background: #43a047;
+}
+
+.update-error {
+  color: red;
+  margin-bottom: 12px;
+}
+
+.update-success {
+  color: green;
+  margin-bottom: 12px;
+}
+
+.update-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* New location styles */
+.update-locations-section {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.update-locations-section h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.update-location-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.update-location-item .update-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.update-location-item select {
+  flex: 1;
+  min-width: 100px;
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: white;
+}
+
+.update-remove-btn {
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 4px;
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.update-remove-btn:hover {
+  background: #c82333;
+}
+
+.update-add-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 4px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.update-add-btn:hover {
+  background: #218838;
+} 
+
+/* Make sure select and its options match the input box style */
+.update-location-item select,
+.update-location-item select option {
+  color: #ffffff !important; /* Light text for dark background */
+  background: #2d2d2d !important; /* Dark background */
+  border: 1px solid #ccc;
+}
+
+/* Match input background for .update-input as well, if not already set */
+.update-input {
+  background: #2d2d2d; /* Dark background */
+  color: #ffffff; /* Light text for dark background */
+} 

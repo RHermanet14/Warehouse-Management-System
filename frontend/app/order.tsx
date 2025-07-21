@@ -8,6 +8,7 @@ import { CameraView, Camera, BarcodeScanningResult, BarcodeType } from "expo-cam
 import ThemedText from '../components/ThemedText';
 import ThemedView from '../components/ThemedView';
 import ThemedTextInput from '../components/ThemedTextInput';
+import { parseLocations } from '../constants/Types';
 
 const LOCATIONS = [
   'Garage',
@@ -17,6 +18,7 @@ const LOCATIONS = [
   'Bedroom',
   'No',
   'Where',
+  'Tat Two',
 ];
 
 interface Item {
@@ -25,6 +27,12 @@ interface Item {
   description?: string;
   quantity: number;
   picked_quantity?: number;
+  locations?: Array<{
+    quantity: number;
+    location: string;
+    type: string;
+  }>;
+  // Keep backward compatibility for existing code
   primary_location?: string;
   primary_quantity?: number;
   secondary_location?: string;
@@ -85,6 +93,7 @@ export default function OrderScreen() {
       }
       return null;
     } catch (e) {
+      Alert.alert('Error', 'Failed to fetch order');
       return null;
     }
   };
@@ -123,36 +132,8 @@ export default function OrderScreen() {
       Alert.alert('Invalid Quantity', 'You cannot pick more than the remaining quantity.');
       return;
     }
-    if (picked < remainingQty) {
-      // Partial pick, update picked_quantity and stay on item
-      try {
-        await fetch(
-          `${BACKEND_URL}/orders/${orderId}/items/${currentItem.barcode_id}`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              picked_quantity: picked,
-              picked_location: locationBarcode 
-            }),
-          }
-        );
-        // Re-fetch order items
-        const itemsRes = await fetch(`${BACKEND_URL}/orders/${orderId}/items`);
-        const updatedItems = await itemsRes.json();
-        setOrderItems(updatedItems);
-        setLocationBarcode('');
-        setItemBarcode('');
-        setPickedQty('');
-        // Stay on this item
-      } catch (e) {
-        Alert.alert('Error', 'Failed to update picked quantity');
-      }
-      return;
-    }
-    // Full pick or more, update picked_quantity and go to next item
     try {
-      await fetch(
+      const response = await fetch(
         `${BACKEND_URL}/orders/${orderId}/items/${currentItem.barcode_id}`,
         {
           method: 'PUT',
@@ -163,6 +144,15 @@ export default function OrderScreen() {
           }),
         }
       );
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 400 && errorData.error && errorData.error.includes('Invalid location')) {
+          Alert.alert('Invalid Location', 'This item does not have the specified location.');
+          return;
+        }
+        Alert.alert('Error', errorData.error || 'Failed to update picked quantity');
+        return;
+      }
       // Re-fetch order items
       const itemsRes = await fetch(`${BACKEND_URL}/orders/${orderId}/items`);
       const updatedItems = await itemsRes.json();
@@ -180,6 +170,9 @@ export default function OrderScreen() {
     setOrderItems(items => {
       const skipped = items[currentIndex];
       const newItems = [...items.slice(0, currentIndex), ...items.slice(currentIndex + 1), skipped];
+      // Find the next incomplete line (excluding the just-skipped one, now at the end)
+      const firstIncomplete = newItems.findIndex((item, idx) => idx !== newItems.length - 1 && (item.picked_quantity || 0) < item.quantity);
+      setCurrentIndex(firstIncomplete !== -1 ? firstIncomplete : 0);
       return newItems;
     });
     setLocationBarcode('');
@@ -307,6 +300,8 @@ export default function OrderScreen() {
     );
   }
 
+  const locations = parseLocations(currentItem?.locations);
+
   return (
     <ThemedView style={styles.container} scroll={true}>
       <ThemedText style={styles.title}>Order ID: {orderId}</ThemedText>
@@ -320,24 +315,40 @@ export default function OrderScreen() {
           <ThemedText style={styles.label}>To Pick: <ThemedText style={styles.value}>{remainingQty}</ThemedText></ThemedText>
           
           {/* Location Information */}
-          <ThemedText style={styles.locationLabel}>Location:</ThemedText>
-          <View style={styles.locationRow}>
-            <ThemedText style={styles.locationText}>
-              Primary: <ThemedText style={styles.value}>{currentItem.primary_location || 'Not set'}</ThemedText>
-            </ThemedText>
-            <ThemedText style={styles.locationQuantity}>
-              {currentItem.primary_quantity || 0}
-            </ThemedText>
-          </View>
-          {currentItem.secondary_location && (
-            <View style={styles.locationRow}>
-              <ThemedText style={styles.locationText}>
-                Secondary: <ThemedText style={styles.value}>{currentItem.secondary_location}</ThemedText>
-              </ThemedText>
-              <ThemedText style={styles.locationQuantity}>
-                {currentItem.secondary_quantity || 0}
-              </ThemedText>
-            </View>
+          <ThemedText style={styles.locationLabel}>Locations:</ThemedText>
+          {locations.length > 0 ? (
+            locations.map((loc, index) => (
+              <View key={index} style={styles.locationRow}>
+                <ThemedText style={styles.locationText}>
+                  {loc.type.charAt(0).toUpperCase() + loc.type.slice(1)}: <ThemedText style={styles.value}>{loc.location}</ThemedText>
+                </ThemedText>
+                <ThemedText style={styles.locationQuantity}>
+                  {loc.quantity}
+                </ThemedText>
+              </View>
+            ))
+          ) : (
+            // Fallback to old format for backward compatibility
+            <>
+              <View style={styles.locationRow}>
+                <ThemedText style={styles.locationText}>
+                  Primary: <ThemedText style={styles.value}>{currentItem.primary_location || 'Not set'}</ThemedText>
+                </ThemedText>
+                <ThemedText style={styles.locationQuantity}>
+                  {currentItem.primary_quantity || 0}
+                </ThemedText>
+              </View>
+              {currentItem.secondary_location && (
+                <View style={styles.locationRow}>
+                  <ThemedText style={styles.locationText}>
+                    Secondary: <ThemedText style={styles.value}>{currentItem.secondary_location}</ThemedText>
+                  </ThemedText>
+                  <ThemedText style={styles.locationQuantity}>
+                    {currentItem.secondary_quantity || 0}
+                  </ThemedText>
+                </View>
+              )}
+            </>
           )}
         </ThemedView>
 

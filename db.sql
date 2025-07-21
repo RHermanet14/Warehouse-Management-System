@@ -8,10 +8,11 @@ BEGIN
     SELECT 1 FROM information_schema.tables WHERE table_name = 'account'
   ) THEN
 
-    -- Create custom type
+    -- Create custom type with type field
     CREATE TYPE LOCATION AS (
       quantity INT,
-      location VARCHAR(32)
+      location VARCHAR(32),
+      type VARCHAR(32)
     );
 
     -- Create tables
@@ -52,8 +53,7 @@ BEGIN
       barcode_type VARCHAR(32),
       name VARCHAR(32),
       description VARCHAR(255),
-      primary_location LOCATION,
-      secondary_location LOCATION,
+      locations LOCATION[],
       total_quantity INT,
       PRIMARY KEY (barcode_id)
     );
@@ -75,9 +75,10 @@ BEGIN
     PRIMARY KEY (order_id, barcode_id)
   );
 
-    -- Insert initial data
-    INSERT INTO item (barcode_id, barcode_type, name, primary_location, total_quantity) 
-    VALUES ('817894024803', 'ean13', 'Sphere Push Pins', ROW(60, 'Bedroom')::LOCATION, 60);
+    -- Insert initial data with locations array
+    INSERT INTO item (barcode_id, barcode_type, name, locations, total_quantity) 
+    VALUES ('817894024803', 'ean13', 'Sphere Push Pins', 
+           ARRAY[ROW(60, 'Bedroom', 'primary')::LOCATION], 60);
 
     INSERT INTO item (barcode_id, barcode_type) VALUES ('1', 'ean13');
     INSERT INTO item (barcode_id, barcode_type) VALUES ('2', 'ean13');

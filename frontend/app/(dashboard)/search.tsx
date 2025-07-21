@@ -27,9 +27,7 @@ const Search = () => {
         try {
             // Try different barcode types since we don't know which one it is
             const res = await axios.get(`${BACKEND_URL}/items?barcode_id=${barcodeId}`);
-            console.log(res.data.item);
                 if (res.data.item) {
-                    console.log("successful search");
                     setItem(res.data.item);
                     setIsLoading(false);
                     return;
@@ -71,7 +69,7 @@ const Search = () => {
             <Spacer height={10} />
 
             <ThemedButton onPress={handleSearch} style={buttonStyles.primary} disabled={isLoading}>
-                <Text style={{color: 'white'}}>{isLoading ? "Searching..." : "Search"}</Text>
+                <ThemedText>{isLoading ? "Searching..." : "Search"}</ThemedText>
             </ThemedButton>
 
             <Spacer height={10} />

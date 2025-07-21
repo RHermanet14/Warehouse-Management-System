@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
 
 // PUT /items - update an item
 router.put('/', async (req, res) => {
-  const { barcode_id, name, description, primary_location, secondary_location, total_quantity } = req.body;
+  const { barcode_id, name, description, locations, total_quantity } = req.body;
   if (!barcode_id) {
     return res.status(400).json({ error: 'barcode_id is required' });
   }
@@ -38,25 +38,27 @@ router.put('/', async (req, res) => {
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Item not found' });
     }
+    
     const toIntOrNULL = (val: string | number | null | undefined) => {
       if (val === undefined || val === null || val === '') return null;
       return parseInt(String(val), 10);
     };
+
+    // Convert locations array to PostgreSQL format
+    const locationsArray = locations ? locations.map((loc: any) => 
+      `ROW(${toIntOrNULL(loc.quantity)}, '${loc.location}', '${loc.type}')::LOCATION`
+    ).join(', ') : '';
+
     const updated = await pool.query(
       `UPDATE item SET
          name = $1,
          description = $2,
-         primary_location = ROW($3, $4)::LOCATION,
-         secondary_location = ROW($5, $6)::LOCATION,
-         total_quantity = $7
-         WHERE barcode_id = $8 RETURNING *`,
+         locations = ARRAY[${locationsArray}],
+         total_quantity = $3
+         WHERE barcode_id = $4 RETURNING *`,
       [
         name,
         description,
-        toIntOrNULL(primary_location?.quantity),
-        primary_location?.location ?? null,
-        toIntOrNULL(secondary_location?.quantity),
-        secondary_location?.location ?? null,
         toIntOrNULL(total_quantity),
         barcode_id
       ]
@@ -70,7 +72,7 @@ router.put('/', async (req, res) => {
 
 // POST /items - add or update an item with provided barcode
 router.post('/', async (req, res) => {
-  const { barcode_id, barcode_type, name, description, primary_location, secondary_location, total_quantity } = req.body;
+  const { barcode_id, barcode_type, name, description, locations, total_quantity } = req.body;
   if (!barcode_id) {
     return res.status(400).json({ error: 'barcode_id is required' });
   }
@@ -79,38 +81,39 @@ router.post('/', async (req, res) => {
       'SELECT * FROM item WHERE barcode_id = $1',
       [barcode_id]
     );
+    
+    const toIntOrNULL = (val: string | number | null | undefined) => {
+      if (val === undefined || val === null || val === '') return null;
+      return parseInt(String(val), 10);
+    };
+
+    // Convert locations array to PostgreSQL format
+    const locationsArray = locations ? locations.map((loc: any) => 
+      `ROW(${toIntOrNULL(loc.quantity)}, '${loc.location}', '${loc.type}')::LOCATION`
+    ).join(', ') : '';
+
     if (existing.rows.length > 0) {
       const updated = await pool.query(
         'UPDATE item SET total_quantity = total_quantity + $1 WHERE barcode_id = $2 RETURNING *',
         [total_quantity, barcode_id]
       );
-      if (primary_location) {
+      if (locations && locations.length > 0) {
         await pool.query(
-          'UPDATE item SET primary_location = $1 WHERE barcode_id = $2 RETURNING *',
-          [primary_location, barcode_id]
-        );
-      }
-      if (secondary_location) {
-        await pool.query(
-          'UPDATE item SET secondary_location = $1 WHERE barcode_id = $2 RETURNING *',
-          [secondary_location, barcode_id]
+          `UPDATE item SET locations = ARRAY[${locationsArray}] WHERE barcode_id = $1 RETURNING *`,
+          [barcode_id]
         );
       }
       return res.status(200).json(updated.rows[0]);
     } else {
       const result = await pool.query(
-        `INSERT INTO item (barcode_id, barcode_type, name, description, primary_location, secondary_location, total_quantity)
-         VALUES ($1, $2, $3, $4, ROW($5, $6)::LOCATION, ROW($7, $8)::LOCATION, $9) RETURNING *`,
+        `INSERT INTO item (barcode_id, barcode_type, name, description, locations, total_quantity)
+         VALUES ($1, $2, $3, $4, ARRAY[${locationsArray}], $5) RETURNING *`,
         [
           barcode_id,
           barcode_type,
           name,
           description,
-          primary_location?.quantity ?? null,
-          primary_location?.location ?? null,
-          secondary_location?.quantity ?? null,
-          secondary_location?.location ?? null,
-          total_quantity
+          toIntOrNULL(total_quantity)
         ]
       );
       return res.status(201).json(result.rows[0]);

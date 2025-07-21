@@ -12,12 +12,13 @@
     "axios": "^1.10.0",
     "expo": "~53.0.15",
     "expo-barcode-scanner": "^13.0.1",
+    "expo-camera": "~16.1.10",
     "expo-router": "~5.1.2",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-native": "0.79.4",
     "react-native-dotenv": "^3.4.11",
-    "expo-camera": "~16.1.10"
+    "react-native-dropdown-picker": "^5.4.6"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

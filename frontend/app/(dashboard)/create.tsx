@@ -11,6 +11,7 @@ import ThemedText from "../../components/ThemedText";
 import ThemedView from "../../components/ThemedView";
 import ThemedButton from "../../components/ThemedButton";
 import { inputStyles, buttonStyles, flashLightButtonStyles, heading } from "../../constants/Styles";
+import DropDownPicker from 'react-native-dropdown-picker';
 
 const Create = () => {
     const colorScheme = useColorScheme();
@@ -22,6 +23,7 @@ const Create = () => {
     const [scanningEnabled, setScanningEnabled] = useState(true);
     const lastScannedRef = useRef<string | null>(null);
     const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [dropdownOpen, setDropdownOpen] = useState<{[key: number]: boolean}>({});
 
     // Initial form state
     const initialFormState = {
@@ -30,14 +32,35 @@ const Create = () => {
         name: "",
         description: "",
         total_quantity: "",
-        primary_location: "",
-        primary_quantity: "",
-        secondary_location: "",
-        secondary_quantity: ""
+        locations: [] as Array<{ location: string; quantity: string; type: string }>,
     };
 
     // Form state
     const [formData, setFormData] = useState(initialFormState);
+
+    // Add location
+    const addLocation = () => {
+        setFormData(prev => ({
+            ...prev,
+            locations: [...prev.locations, { location: '', quantity: '', type: 'primary' }],
+        }));
+    };
+
+    // Remove location
+    const removeLocation = (idx: number) => {
+        setFormData(prev => ({
+            ...prev,
+            locations: prev.locations.filter((_, i) => i !== idx),
+        }));
+    };
+
+    // Update location field
+    const updateLocationField = (idx: number, field: 'location' | 'quantity' | 'type', value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            locations: prev.locations.map((loc, i) => i === idx ? { ...loc, [field]: value } : loc),
+        }));
+    };
 
     useEffect(() => {
         const getCameraPermissions = async () => {
@@ -47,7 +70,6 @@ const Create = () => {
         getCameraPermissions();
     }, []);
 
-    // Cleanup timeout on unmount
     useEffect(() => {
         return () => {
             if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
@@ -82,38 +104,25 @@ const Create = () => {
             return;
         }
         const quantity = parseInt(formData.total_quantity);
-/*
-        if (!formData.name.trim()) {
-            Alert.alert("Error", "Please enter an item name");
-            return;
-        }
-
-        if (isNaN(quantity) || quantity <= 0) {
-            Alert.alert("Error", "Please enter a valid quantity");
-            return;
-        }
-*/
         setIsLoading(true);
         try {
-            // Prepare location data
-            const primaryLocation = formData.primary_location.trim() && formData.primary_quantity.trim() 
-                ? { "location": formData.primary_location, "quantity": parseInt(formData.primary_quantity) }
-                : null;
-            
-            const secondaryLocation = formData.secondary_location.trim() && formData.secondary_quantity.trim()
-                ? { "location": formData.secondary_location, "quantity": parseInt(formData.secondary_quantity) }
-                : null;
+            // Prepare locations array for backend
+            const locations = formData.locations
+                .filter(loc => loc.location.trim() !== '' && loc.quantity.trim() !== '')
+                .map(loc => ({
+                    location: loc.location,
+                    quantity: parseInt(loc.quantity.replace(/^0+(?=\d)/, '')) || 0,
+                    type: loc.type,
+                }));
 
             const response = await axios.post(`${BACKEND_URL}/items`, {
                 barcode_id: formData.barcode_id,
                 barcode_type: formData.barcode_type,
                 name: formData.name,
                 description: formData.description || null,
-                primary_location: primaryLocation,
-                secondary_location: secondaryLocation,
+                locations,
                 total_quantity: quantity
             });
-            console.log(response.data);
             if (response.status === 200) {
               Alert.alert("Success", "Item quantity updated successfully!", [{text: "Update Another", onPress: handleClear}]);
               return;
@@ -123,10 +132,7 @@ const Create = () => {
             } else {
               Alert.alert("Error", "Failed to create item", [{text: "OK", onPress: handleClear}]);
             }
-
-            
         } catch (error: any) {
-            console.log(error);
             if (error.response?.status === 400) {
                 Alert.alert("Error", error.response.data.error || "Invalid data provided");
             } else {
@@ -160,7 +166,6 @@ const Create = () => {
                         style={StyleSheet.absoluteFillObject}
                         enableTorch={flashlightEnabled}
                     />
-                    
                     {/* Flashlight Toggle Button */}
                     <TouchableOpacity 
                         style={flashLightButtonStyles.primary} 
@@ -172,7 +177,6 @@ const Create = () => {
                             color={theme.iconColorFocused}
                         />
                     </TouchableOpacity>
-
                     {/* Close Scanner Button */}
                     <TouchableOpacity 
                         style={styles.closeButton} 
@@ -193,7 +197,6 @@ const Create = () => {
                     <Spacer />
                     {/* Barcode Section */}
                     <ThemedText style={styles.sectionTitle}>Barcode Information (Required)</ThemedText>
-                    
                     <TextInput
                         style={[inputStyles.primary]}
                         placeholder="Barcode ID"
@@ -203,14 +206,12 @@ const Create = () => {
                         autoCapitalize="none"
                         autoCorrect={false}
                     />
-                    
                     <ThemedButton 
                         onPress={() => setShowScanner(true)} 
                         style={styles.scanButton}
                     >
                         <ThemedText>Scan Barcode</ThemedText>
                     </ThemedButton>
-
                     <Spacer />
                     <ThemedText style={styles.sectionTitle}>Barcode Type</ThemedText>
                     <TextInput
@@ -223,10 +224,8 @@ const Create = () => {
                         autoCorrect={false}
                     />
                     <Spacer height={10} />
-
                     {/* Item Details */}
                     <ThemedText style={styles.sectionTitle}>Item Details</ThemedText>
-                    
                     <TextInput
                         style={[inputStyles.primary]}
                         placeholder="Item Name"
@@ -236,7 +235,6 @@ const Create = () => {
                         autoCapitalize="words"
                     />
                     <Spacer height={10} />
-
                     <TextInput
                         style={[inputStyles.primary, styles.textArea]}
                         placeholder="Description"
@@ -248,7 +246,6 @@ const Create = () => {
                         textAlignVertical="top"
                     />
                     <Spacer height={10} />
-
                     <TextInput
                         style={[inputStyles.primary]}
                         placeholder="Total Quantity"
@@ -258,59 +255,60 @@ const Create = () => {
                         keyboardType="numeric"
                     />
                     <Spacer height={20} />
-
                     {/* Location Information */}
-                    <ThemedText style={styles.sectionTitle}>Location Information</ThemedText>
-                    
-                    <ThemedText style={styles.subsectionTitle}>Primary Location</ThemedText>
-                    <TextInput
-                        style={[inputStyles.primary]}
-                        placeholder="Primary Location"
-                        placeholderTextColor="#666"
-                        value={formData.primary_location}
-                        onChangeText={(text) => setFormData(prev => ({ ...prev, primary_location: text }))}
-                        autoCapitalize="words"
-                    />
-                    <Spacer height={10} />
-                    
-                    <TextInput
-                        style={[inputStyles.primary]}
-                        placeholder="Primary Location Quantity"
-                        placeholderTextColor="#666"
-                        value={formData.primary_quantity}
-                        onChangeText={(text) => setFormData(prev => ({ ...prev, primary_quantity: text }))}
-                        keyboardType="numeric"
-                    />
-                    <Spacer height={15} />
-
-                    <ThemedText style={styles.subsectionTitle}>Secondary Location</ThemedText>
-                    <TextInput
-                        style={[inputStyles.primary]}
-                        placeholder="Secondary Location"
-                        placeholderTextColor="#666"
-                        value={formData.secondary_location}
-                        onChangeText={(text) => setFormData(prev => ({ ...prev, secondary_location: text }))}
-                        autoCapitalize="words"
-                    />
-                    <Spacer height={10} />
-                    
-                    <TextInput
-                        style={[inputStyles.primary]}
-                        placeholder="Secondary Location Quantity"
-                        placeholderTextColor="#666"
-                        value={formData.secondary_quantity}
-                        onChangeText={(text) => setFormData(prev => ({ ...prev, secondary_quantity: text }))}
-                        keyboardType="numeric"
-                    />
+                    <ThemedText style={styles.sectionTitle}>Locations</ThemedText>
+                    {formData.locations.map((loc, idx) => (
+                        <View key={idx} style={{ marginBottom: 16, borderBottomWidth: 1, borderColor: '#eee', paddingBottom: 12 }}>
+                            <TextInput
+                                style={[inputStyles.primary, { marginBottom: 8 }]}
+                                placeholder="Location Name"
+                                placeholderTextColor="#666"
+                                value={loc.location}
+                                onChangeText={text => updateLocationField(idx, 'location', text)}
+                                autoCapitalize="words"
+                            />
+                            <TextInput
+                                style={[inputStyles.primary, { marginBottom: 8 }]}
+                                placeholder="Quantity"
+                                placeholderTextColor="#666"
+                                value={loc.quantity}
+                                onChangeText={text => updateLocationField(idx, 'quantity', text)}
+                                keyboardType="numeric"
+                            />
+                            <DropDownPicker
+                                open={!!dropdownOpen[idx]}
+                                value={loc.type}
+                                items={[
+                                    { label: 'Primary', value: 'primary' },
+                                    { label: 'Secondary', value: 'secondary' },
+                                    { label: 'Overflow', value: 'overflow' },
+                                    { label: 'Storage', value: 'storage' },
+                                ]}
+                                setOpen={open => setDropdownOpen(prev => ({ ...prev, [idx]: !!open }))}
+                                setValue={cb => {
+                                    const value = typeof cb === 'function' ? cb(loc.type) : cb;
+                                    updateLocationField(idx, 'type', value);
+                                }}
+                                setItems={() => {}}
+                                style={[inputStyles.primary, { marginBottom: 8 }]}
+                                containerStyle={{ marginBottom: 8 }}
+                                zIndex={1000 - idx}
+                                listMode="SCROLLVIEW"
+                            />
+                            <TouchableOpacity onPress={() => removeLocation(idx)} style={{ backgroundColor: '#dc3545', borderRadius: 4, padding: 8, alignSelf: 'flex-start' }}>
+                                <Text style={{ color: 'white' }}>Remove</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ))}
+                    <ThemedButton onPress={addLocation} style={[buttonStyles.primary, { backgroundColor: '#28a745', marginBottom: 10 }]}>
+                        <Text style={{ color: 'white' }}>Add Location</Text>
+                    </ThemedButton>
                     <Spacer height={20} />
-
                     {/* Action Buttons */}
                     <ThemedButton onPress={handleSubmit} style={buttonStyles.primary} disabled={isLoading}>
                         <Text style={{color: 'white'}}>{isLoading ? "Creating..." : "Create Item"}</Text>
                     </ThemedButton>
-
                     <Spacer height={10} />
-
                     <ThemedButton onPress={handleClear} style={[buttonStyles.primary, {backgroundColor: "#FF3B30"}]}>
                         <Text style={{color: 'white'}}>Clear Form</Text>
                     </ThemedButton>

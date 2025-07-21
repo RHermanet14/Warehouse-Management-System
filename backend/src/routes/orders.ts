@@ -69,38 +69,35 @@ router.get('/', async (req, res) => {
 // GET /orders/by-locations?locations=loc1,loc2,...
 router.get('/by-locations', async (req, res) => {
   const locationsParam = req.query.locations;
-  const locations = String(locationsParam).split(',').map(l => l.trim()).filter(Boolean);
+  const selectedLocations = String(locationsParam).split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
   try {
     const result = await pool.query(`
-      SELECT o.order_id,
-             array_agg(DISTINCT l.location ORDER BY l.location) as order_locations
+      SELECT o.order_id
       FROM orders o
       JOIN order_items oi ON o.order_id = oi.order_id
       JOIN item i ON oi.barcode_id = i.barcode_id
-      LEFT JOIN LATERAL (
-        VALUES ((i.primary_location).location), ((i.secondary_location).location)
-      ) AS l(location) ON TRUE
-      WHERE l.location IS NOT NULL
-        AND o.status = 'pending'
+      WHERE o.status = 'pending'
       GROUP BY o.order_id
-    `);
-    const selectedSet = new Set(locations.map(l => l.toLowerCase()));
-    const found = result.rows.find(row =>
-      (row.order_locations as string[]).every((loc: string) => selectedSet.has(loc.toLowerCase()))
-    );
-    if (!found) {
+      HAVING bool_and(
+        EXISTS (
+          SELECT 1
+          FROM unnest((i).locations) AS loc
+          WHERE lower((loc).location) = ANY($1)
+        )
+      )
+      LIMIT 1
+    `, [selectedLocations]);
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'No pending orders found for selected locations' });
     }
-    
+    const found = result.rows[0];
     // Mark the order as in_progress when starting fulfillment
     await pool.query(
       'UPDATE orders SET status = $1 WHERE order_id = $2',
       ['in_progress', found.order_id]
     );
-    
     return res.status(200).json({ order_id: found.order_id });
   } catch (err) {
-    console.error('[by-locations] Error:', err);
     res.status(500).json({ error: 'Failed to get order by locations', details: err });
   }
 });
@@ -110,17 +107,19 @@ router.get('/:order_id/items', async (req, res) => {
   const { order_id } = req.params;
   try {
     const result = await pool.query(`
-      SELECT i.barcode_id, i.name, i.description, oi.quantity, oi.picked_quantity,
-             (i.primary_location).location as primary_location,
-             (i.primary_location).quantity as primary_quantity,
-             (i.secondary_location).location as secondary_location,
-             (i.secondary_location).quantity as secondary_quantity
+      SELECT row_to_json(i) as item, oi.quantity, oi.picked_quantity
       FROM order_items oi
       JOIN item i ON oi.barcode_id = i.barcode_id
       WHERE oi.order_id = $1
       ORDER BY i.name
     `, [order_id]);
-    res.status(200).json(result.rows);
+    // Flatten the item fields for compatibility
+    const rows = result.rows.map(row => ({
+      ...row.item,
+      quantity: row.quantity,
+      picked_quantity: row.picked_quantity
+    }));
+    res.status(200).json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch order items', details: err });
   }
@@ -138,11 +137,23 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
     return res.status(400).json({ error: 'picked_location is required and must be a string' });
   }
   try {
+    // Check if picked_location is valid for this item
+    const itemRes = await pool.query('SELECT row_to_json(item) as item FROM item WHERE barcode_id = $1', [barcode_id]);
+    if (itemRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    const locations = itemRes.rows[0].item.locations;
+    // locations is now a JS array
+    const valid = Array.isArray(locations) && locations.some(loc => {
+      return String(loc.location).trim().toLowerCase() === String(picked_location).trim().toLowerCase();
+    });
+    if (!valid) {
+      return res.status(400).json({ error: 'Invalid location: this item does not have the specified location.' });
+    }
     // Start a transaction
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-
       // Update picked_quantity in order_items
       const result = await client.query(
         `UPDATE order_items
@@ -151,30 +162,24 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
          RETURNING *`,
         [picked_quantity, order_id, barcode_id]
       );
-      
       if (result.rows.length === 0) {
         await client.query('ROLLBACK');
         return res.status(404).json({ error: 'Order item not found' });
       }
-
-      // Update the correct location quantity and total_quantity
+      // Update the correct location quantity in the locations array
       await client.query(`
         UPDATE item
-        SET
-          primary_location = CASE
-            WHEN (primary_location).location = $1
-              THEN ROW((primary_location).quantity - $2, (primary_location).location)::LOCATION
-            ELSE primary_location
-          END,
-          secondary_location = CASE
-            WHEN (secondary_location).location = $1
-              THEN ROW((secondary_location).quantity - $2, (secondary_location).location)::LOCATION
-            ELSE secondary_location
-          END,
-          total_quantity = total_quantity - $2
+        SET locations = ARRAY(
+          SELECT
+            CASE
+              WHEN loc.location = $1 THEN ROW(loc.quantity - $2, loc.location, loc.type)::LOCATION
+              ELSE loc
+            END
+          FROM unnest(locations) AS loc
+        ),
+        total_quantity = total_quantity - $2
         WHERE barcode_id = $3
       `, [picked_location, picked_quantity, barcode_id]);
-
       // Check if all items in the order are fully picked
       const orderCompletionCheck = await client.query(`
         SELECT 
@@ -183,9 +188,7 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
         FROM order_items oi
         WHERE oi.order_id = $1
       `, [order_id]);
-
       const { total_items, completed_items } = orderCompletionCheck.rows[0];
-      
       // If all items are completed, mark order as completed
       if (total_items > 0 && total_items == completed_items) {
         await client.query(
@@ -193,7 +196,6 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
           ['completed', order_id]
         );
       }
-
       await client.query('COMMIT');
       res.status(200).json(result.rows[0]);
     } catch (err) {
