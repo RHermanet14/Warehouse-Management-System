@@ -38,17 +38,18 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT o.order_id, o.order_date, oi.barcode_id, oi.quantity
+      SELECT o.order_id, o.order_date, o.status, oi.barcode_id, oi.quantity
       FROM orders o
       LEFT JOIN order_items oi ON o.order_id = oi.order_id
       ORDER BY o.order_id DESC, oi.barcode_id
     `);
-    const ordersMap: Record<string, { order_id: number, order_date: string, items: Array<{ barcode_id: string, quantity: number }> }> = {};
+    const ordersMap: Record<string, { order_id: number, order_date: string, status: string, items: Array<{ barcode_id: string, quantity: number }> }> = {};
     for (const row of result.rows) {
       if (!ordersMap[row.order_id]) {
         ordersMap[row.order_id] = {
           order_id: row.order_id,
           order_date: row.order_date,
+          status: row.status,
           items: []
         };
       }

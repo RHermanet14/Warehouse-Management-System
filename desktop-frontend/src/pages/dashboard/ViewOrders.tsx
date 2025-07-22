@@ -10,6 +10,7 @@ interface OrderItem {
 interface Order {
   order_id: number;
   order_date: string;
+  status: string;
   items: OrderItem[];
 }
 
@@ -53,6 +54,7 @@ export default function ViewOrders() {
               <div className="view-orders-header-info">
                 <strong className="view-orders-order-id">Order #{order.order_id}</strong>
                 <span className="view-orders-order-date">({new Date(order.order_date).toLocaleString()})</span>
+                <span className="view-orders-order-status">[{order.status.charAt(0).toUpperCase() + order.status.slice(1)}]</span>
               </div>
               <button
                 onClick={() => toggleExpand(order.order_id)}

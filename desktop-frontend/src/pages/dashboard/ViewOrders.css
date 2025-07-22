@@ -93,4 +93,12 @@
   padding: 4px 0;
   color: black;
   text-align: center;
+}
+
+.view-orders-order-status {
+  margin-left: 12px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #1976d2;
+  text-transform: capitalize;
 } 
