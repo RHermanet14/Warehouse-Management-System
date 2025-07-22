@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { StyleSheet, TextInput, Alert, Text } from "react-native";
+import { StyleSheet, TextInput, Alert, Text, View, ScrollView } from "react-native";
 import axios from "axios";
 import { BACKEND_URL } from "@env";
 import { Item } from "../../constants/Types";
+import type { Location } from "../../constants/Types";
 import Spacer from "../../components/Spacer";
 import ThemedText from "../../components/ThemedText";
 import ThemedView from "../../components/ThemedView";
@@ -52,43 +53,47 @@ const Search = () => {
 
     return (
         <ThemedView style={styles.container}>
-            <ThemedText title={true} style={heading.primary}>
-                Search by Barcode ID
-            </ThemedText>
-            <Spacer/>
+            <ScrollView contentContainerStyle={{ paddingBottom: 90 }}>
+                <ThemedText title={true} style={heading.primary}>
+                    Search by Barcode ID
+                </ThemedText>
+                <Spacer/>
 
-            <TextInput
-                style={[inputStyles.primary]}
-                placeholder="Enter Barcode ID"
-                placeholderTextColor="#666"
-                value={barcodeId}
-                onChangeText={setBarcodeId}
-                autoCapitalize="none"
-                autoCorrect={false}
-            />
-            <Spacer height={10} />
+                <TextInput
+                    style={[inputStyles.primary]}
+                    placeholder="Enter Barcode ID"
+                    placeholderTextColor="#666"
+                    value={barcodeId}
+                    onChangeText={setBarcodeId}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                />
+                <Spacer height={10} />
 
-            <ThemedButton onPress={handleSearch} style={buttonStyles.primary} disabled={isLoading}>
-                <ThemedText>{isLoading ? "Searching..." : "Search"}</ThemedText>
-            </ThemedButton>
-
-            <Spacer height={10} />
-
-            {searched && !isLoading && (
-                <ThemedButton onPress={handleClear} style={buttonStyles.primary}>
-                    <ThemedText>Clear Search</ThemedText>
+                <ThemedButton onPress={handleSearch} style={buttonStyles.primary} disabled={isLoading}>
+                    <ThemedText>{isLoading ? "Searching..." : "Search"}</ThemedText>
                 </ThemedButton>
-            )}
 
-            {item && (<ItemDisplay item={item} scroll={true} />)}
+                <Spacer height={10} />
 
-            {searched && !item && !isLoading && (
-                <ThemedView style={styles.noResultContainer}>
-                    <ThemedText style={styles.noResultText}>
-                        No item found with barcode ID: {barcodeId}
-                    </ThemedText>
-                </ThemedView>
-            )}
+                {searched && !isLoading && (
+                    <ThemedButton onPress={handleClear} style={buttonStyles.primary}>
+                        <ThemedText>Clear Search</ThemedText>
+                    </ThemedButton>
+                )}
+
+                {item && (
+                    <ItemDisplay item={item} scroll={true} />
+                )}
+
+                {searched && !item && !isLoading && (
+                    <ThemedView style={styles.noResultContainer}>
+                        <ThemedText style={styles.noResultText}>
+                            No item found with barcode ID: {barcodeId}
+                        </ThemedText>
+                    </ThemedView>
+                )}
+            </ScrollView>
         </ThemedView>
     );
 };
@@ -96,24 +101,17 @@ const Search = () => {
 export default Search;
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 20,
-    },
-    resultContainer: {
-        flex: 1,
-        backgroundColor: 'white',
-        marginTop: 20,
-        borderRadius: 8,
-        padding: 16,
-    },
-    noResultContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    noResultText: {
-        fontSize: 16,
-        textAlign: 'center',
-    },
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  noResultContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noResultText: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
 });

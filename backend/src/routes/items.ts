@@ -17,7 +17,18 @@ router.get('/', async (req, res) => {
     const result = await pool.query(
       'SELECT row_to_json(item) AS item FROM item WHERE barcode_id = $1', [barcode_id]);
     if (result.rows.length === 0) return res.status(204).json({ error: 'Item not found' });
-    return res.status(200).json(result.rows[0]);
+    const item = result.rows[0].item;
+    // Expand locations with area name
+    if (item.locations && Array.isArray(item.locations)) {
+      const areaIds = [...new Set(item.locations.map((loc: any) => loc.area_id).filter((id: any) => id != null))];
+      let areaMap: Record<number, string> = {};
+      if (areaIds.length > 0) {
+        const areaRes = await pool.query('SELECT area_id, name FROM area WHERE area_id = ANY($1)', [areaIds]);
+        areaMap = Object.fromEntries(areaRes.rows.map((a: any) => [a.area_id, a.name]));
+      }
+      item.locations = item.locations.map((loc: any) => ({ ...loc, area_name: areaMap[loc.area_id] || '' }));
+    }
+    return res.status(200).json({ item });
   } catch (err) {
     console.log(err);
     return res.status(500).json({ error: 'Failed to retrieve items from backend', details: err });
@@ -38,6 +49,18 @@ router.put('/', async (req, res) => {
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Item not found' });
     }
+
+    // Validate locations: area_id and type must be present and valid
+    if (locations && Array.isArray(locations)) {
+      for (const loc of locations) {
+        if (!loc.type || typeof loc.type !== 'string' || !loc.type.trim()) {
+          return res.status(400).json({ error: 'Each location must have a type.' });
+        }
+        if (loc.area_id === undefined || loc.area_id === null || loc.area_id === '' || isNaN(Number(loc.area_id))) {
+          return res.status(400).json({ error: 'Each location must have a valid area selected.' });
+        }
+      }
+    }
     
     const toIntOrNULL = (val: string | number | null | undefined) => {
       if (val === undefined || val === null || val === '') return null;
@@ -46,7 +69,7 @@ router.put('/', async (req, res) => {
 
     // Convert locations array to PostgreSQL format
     const locationsArray = locations ? locations.map((loc: any) => 
-      `ROW(${toIntOrNULL(loc.quantity)}, '${loc.location}', '${loc.type}')::LOCATION`
+      `ROW(${toIntOrNULL(loc.quantity)}, '${loc.bin}', '${loc.type}', ${toIntOrNULL(loc.area_id)})::LOCATION`
     ).join(', ') : '';
 
     const updated = await pool.query(
@@ -82,6 +105,18 @@ router.post('/', async (req, res) => {
       [barcode_id]
     );
     
+    // Validate locations: area_id and type must be present and valid
+    if (locations && Array.isArray(locations)) {
+      for (const loc of locations) {
+        if (!loc.type || typeof loc.type !== 'string' || !loc.type.trim()) {
+          return res.status(400).json({ error: 'Each location must have a type.' });
+        }
+        if (loc.area_id === undefined || loc.area_id === null || loc.area_id === '' || isNaN(Number(loc.area_id))) {
+          return res.status(400).json({ error: 'Each location must have a valid area selected.' });
+        }
+      }
+    }
+
     const toIntOrNULL = (val: string | number | null | undefined) => {
       if (val === undefined || val === null || val === '') return null;
       return parseInt(String(val), 10);
@@ -89,7 +124,7 @@ router.post('/', async (req, res) => {
 
     // Convert locations array to PostgreSQL format
     const locationsArray = locations ? locations.map((loc: any) => 
-      `ROW(${toIntOrNULL(loc.quantity)}, '${loc.location}', '${loc.type}')::LOCATION`
+      `ROW(${toIntOrNULL(loc.quantity)}, '${loc.bin}', '${loc.type}', ${toIntOrNULL(loc.area_id)})::LOCATION`
     ).join(', ') : '';
 
     if (existing.rows.length > 0) {
@@ -120,6 +155,17 @@ router.post('/', async (req, res) => {
     }
   } catch (err) {
     res.status(500).json({ error: 'Failed to insert/update item', details: err });
+  }
+});
+
+// GET /areas - return all areas
+router.get('/areas', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT area_id, name FROM area ORDER BY name');
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch areas', details: err });
   }
 });
 

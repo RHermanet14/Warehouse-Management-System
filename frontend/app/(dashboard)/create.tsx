@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { StyleSheet, TextInput, Alert, ScrollView, View, TouchableOpacity, useColorScheme, Text } from "react-native";
+import { StyleSheet, TextInput, Alert, ScrollView, View, TouchableOpacity, useColorScheme, Text} from "react-native";
 import { CameraView, Camera, BarcodeScanningResult, BarcodeType } from "expo-camera";
 import axios from "axios";
 import { BACKEND_URL } from "@env";
@@ -24,6 +24,7 @@ const Create = () => {
     const lastScannedRef = useRef<string | null>(null);
     const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [dropdownOpen, setDropdownOpen] = useState<{[key: number]: boolean}>({});
+    const [areas, setAreas] = useState<{ area_id: string; name: string }[]>([]);
 
     // Initial form state
     const initialFormState = {
@@ -32,7 +33,7 @@ const Create = () => {
         name: "",
         description: "",
         total_quantity: "",
-        locations: [] as Array<{ location: string; quantity: string; type: string }>,
+        locations: [] as Array<{ bin: string; quantity: string; type: string; area_id: string }>,
     };
 
     // Form state
@@ -42,7 +43,7 @@ const Create = () => {
     const addLocation = () => {
         setFormData(prev => ({
             ...prev,
-            locations: [...prev.locations, { location: '', quantity: '', type: 'primary' }],
+            locations: [...prev.locations, { bin: '', quantity: '', type: 'primary', area_id: '' }],
         }));
     };
 
@@ -55,7 +56,7 @@ const Create = () => {
     };
 
     // Update location field
-    const updateLocationField = (idx: number, field: 'location' | 'quantity' | 'type', value: string) => {
+    const updateLocationField = (idx: number, field: 'bin' | 'quantity' | 'type' | 'area_id', value: string) => {
         setFormData(prev => ({
             ...prev,
             locations: prev.locations.map((loc, i) => i === idx ? { ...loc, [field]: value } : loc),
@@ -74,6 +75,13 @@ const Create = () => {
         return () => {
             if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
         };
+    }, []);
+
+    useEffect(() => {
+        // Fetch areas from backend
+        axios.get(`${BACKEND_URL}/items/areas`).then(res => {
+            if (Array.isArray(res.data)) setAreas(res.data);
+        });
     }, []);
 
     const handleBarcodeScanned = async ({ type, data }: BarcodeScanningResult) => {
@@ -108,11 +116,12 @@ const Create = () => {
         try {
             // Prepare locations array for backend
             const locations = formData.locations
-                .filter(loc => loc.location.trim() !== '' && loc.quantity.trim() !== '')
+                .filter(loc => loc.bin.trim() !== '' && loc.quantity.trim() !== '')
                 .map(loc => ({
-                    location: loc.location,
+                    bin: loc.bin,
                     quantity: parseInt(loc.quantity.replace(/^0+(?=\d)/, '')) || 0,
                     type: loc.type,
+                    area_id: loc.area_id,
                 }));
 
             const response = await axios.post(`${BACKEND_URL}/items`, {
@@ -263,8 +272,8 @@ const Create = () => {
                                 style={[inputStyles.primary, { marginBottom: 8 }]}
                                 placeholder="Location Name"
                                 placeholderTextColor="#666"
-                                value={loc.location}
-                                onChangeText={text => updateLocationField(idx, 'location', text)}
+                                value={loc.bin}
+                                onChangeText={text => updateLocationField(idx, 'bin', text)}
                                 autoCapitalize="words"
                             />
                             <TextInput
@@ -276,7 +285,7 @@ const Create = () => {
                                 keyboardType="numeric"
                             />
                             <DropDownPicker
-                                open={!!dropdownOpen[idx]}
+                                open={!!dropdownOpen[`type_${idx}`]}
                                 value={loc.type}
                                 items={[
                                     { label: 'Primary', value: 'primary' },
@@ -284,7 +293,7 @@ const Create = () => {
                                     { label: 'Overflow', value: 'overflow' },
                                     { label: 'Storage', value: 'storage' },
                                 ]}
-                                setOpen={open => setDropdownOpen(prev => ({ ...prev, [idx]: !!open }))}
+                                setOpen={open => setDropdownOpen(prev => ({ ...prev, [`type_${idx}`]: !!open }))}
                                 setValue={cb => {
                                     const value = typeof cb === 'function' ? cb(loc.type) : cb;
                                     updateLocationField(idx, 'type', value);
@@ -293,6 +302,24 @@ const Create = () => {
                                 style={[inputStyles.primary, { marginBottom: 8 }]}
                                 containerStyle={{ marginBottom: 8 }}
                                 zIndex={1000 - idx}
+                                listMode="SCROLLVIEW"
+                            />
+                            <DropDownPicker
+                                open={!!dropdownOpen[`area_${idx}`]}
+                                value={loc.area_id}
+                                items={[
+                                    { label: 'Select Area', value: '' },
+                                    ...areas.map(area => ({ label: area.name, value: String(area.area_id) })),
+                                ]}
+                                setOpen={open => setDropdownOpen(prev => ({ ...prev, [`area_${idx}`]: !!open }))}
+                                setValue={cb => {
+                                    const value = typeof cb === 'function' ? cb(loc.area_id) : cb;
+                                    updateLocationField(idx, 'area_id', value);
+                                }}
+                                setItems={() => {}}
+                                style={[inputStyles.primary, { marginBottom: 8 }]}
+                                containerStyle={{ marginBottom: 8 }}
+                                zIndex={900 - idx}
                                 listMode="SCROLLVIEW"
                             />
                             <TouchableOpacity onPress={() => removeLocation(idx)} style={{ backgroundColor: '#dc3545', borderRadius: 4, padding: 8, alignSelf: 'flex-start' }}>

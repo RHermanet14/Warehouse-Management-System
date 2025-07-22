@@ -1,7 +1,8 @@
 export interface Location {
   quantity: number;
-  location: string;
+  bin: string;
   type: string;
+  area_name?: string;
 }
 
 export interface Item {
@@ -10,27 +11,17 @@ export interface Item {
   name: string;
   description: string;
   locations?: Location[];
-  // Keep backward compatibility
-  primary_location?: Location | null;
-  secondary_location?: Location | null;
   total_quantity: number;
 }
 
 export const barcode_types: string[] = ["ean13", "ean8", "upc_a", "upc_e", "code39", "code93", "code128", "itf14", "pdf417",];
 
-export function parseLocations(locations: any): Array<{ quantity: number, location: string, type: string }> {
-  if (Array.isArray(locations)) return locations;
-  if (!locations || typeof locations !== 'string') return [];
-  return locations
-    .replace(/^{|}$/g, '')
-    .split(/"\s*,\s*"/)
-    .map(s => s.replace(/^"|"$/g, ''))
-    .map(s => {
-      const [quantity, location, type] = s.replace(/^\(|\)$/g, '').split(',');
-      return {
-        quantity: Number(quantity),
-        location: location.replace(/^"|"$/g, ''),
-        type: type.replace(/^"|"$/g, '')
-      };
-    });
+export function parseLocations(locations: any): Location[] {
+  if (!Array.isArray(locations)) return [];
+  return locations.map(loc => ({
+    bin: typeof loc.bin === 'string' ? loc.bin : (typeof loc.location === 'string' ? loc.location : ''),
+    quantity: loc.quantity ?? 0,
+    type: loc.type || '',
+    area_name: loc.area_name || '',
+  }));
 }

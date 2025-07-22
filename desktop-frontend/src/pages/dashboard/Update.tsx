@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Item, Location } from "../../../../frontend/constants/Types";
 import axios from 'axios';
 import './Update.css';
+
+interface Area { area_id: number; name: string; }
+
+// Add a local type override for Location to allow area_id: number | ''
+type LocalLocation = Omit<Location, 'area_id'> & { area_id: number | '' };
 
 export default function Update() {
   const [barcodeId, setBarcodeId] = useState('');
@@ -11,10 +16,27 @@ export default function Update() {
     description: '',
     total_quantity: '',
   });
-  const [locations, setLocations] = useState<Location[]>([]);
+  const [locations, setLocations] = useState<LocalLocation[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    axios.get('/items/areas')
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setAreas(res.data);
+        } else {
+          console.error('Areas API did not return an array:', res.data);
+          setAreas([]);
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching areas:', err);
+        setAreas([]);
+      });
+  }, []);
 
   const handleFetch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,27 +56,14 @@ export default function Update() {
           description: data.item.description || '',
           total_quantity: data.item.total_quantity?.toString() || '',
         });
-        // Handle locations array or fallback to old format
         if (data.item.locations && Array.isArray(data.item.locations)) {
-          setLocations(data.item.locations);
+          console.log('Fetched locations from backend:', data.item.locations);
+          setLocations(data.item.locations.map((loc: any) => ({
+            ...loc,
+            area_id: typeof loc.area_id === 'number' ? loc.area_id : ''
+          })));
         } else {
-          // Convert old format to new format
-          const newLocations: Location[] = [];
-          if (data.item.primary_location) {
-            newLocations.push({
-              quantity: data.item.primary_location.quantity || 0,
-              location: data.item.primary_location.location || '',
-              type: 'primary',
-            });
-          }
-          if (data.item.secondary_location) {
-            newLocations.push({
-              quantity: data.item.secondary_location.quantity || 0,
-              location: data.item.secondary_location.location || '',
-              type: 'secondary',
-            });
-          }
-          setLocations(newLocations);
+          setLocations([]);
         }
       }
     } catch (err: any) {
@@ -68,14 +77,17 @@ export default function Update() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleLocationChange = (index: number, field: keyof Location, value: string | number) => {
+  const handleLocationChange = (index: number, field: keyof LocalLocation | 'area_id', value: string | number) => {
     const newLocations = [...locations];
     newLocations[index] = { ...newLocations[index], [field]: value };
     setLocations(newLocations);
   };
 
   const addLocation = () => {
-    setLocations([...locations, { quantity: 0, location: '', type: 'primary' }]);
+    setLocations([
+      ...locations,
+      { quantity: 0, bin: '', type: '', area_id: '' }
+    ]);
   };
 
   const removeLocation = (index: number) => {
@@ -87,13 +99,36 @@ export default function Update() {
     setError('');
     setMessage('');
     setLoading(true);
+    // Frontend validation for locations
+    for (const loc of locations) {
+      if (!loc.bin || !loc.bin.trim()) {
+        setError('Each location must have a name.');
+        setLoading(false);
+        return;
+      }
+      if (!loc.quantity || isNaN(Number(loc.quantity))) {
+        setError('Each location must have a valid quantity.');
+        setLoading(false);
+        return;
+      }
+      if (!loc.type || !loc.type.trim()) {
+        setError('Each location must have a type.');
+        setLoading(false);
+        return;
+      }
+      if (loc.area_id === undefined || loc.area_id === null || loc.area_id === '' || isNaN(Number(loc.area_id))) {
+        setError('Each location must have a valid area selected.');
+        setLoading(false);
+        return;
+      }
+    }
     try {
       await axios.put('/items', {
         barcode_id: barcodeId,
         name: form.name,
         description: form.description,
         total_quantity: form.total_quantity,
-        locations: locations.filter(loc => loc.location.trim() !== '').map(loc => ({
+        locations: locations.filter(loc => loc.bin.trim() !== '').map(loc => ({
           ...loc,
           quantity: parseInt(String(loc.quantity).replace(/^0+(?=\d)/, ''), 10) || 0
         })),
@@ -157,8 +192,8 @@ export default function Update() {
                 <input
                   type="text"
                   placeholder="Location Name"
-                  value={location.location}
-                  onChange={e => handleLocationChange(index, 'location', e.target.value)}
+                  value={location.bin}
+                  onChange={e => handleLocationChange(index, 'bin', e.target.value)}
                   className="update-input"
                 />
                 <input
@@ -173,11 +208,25 @@ export default function Update() {
                   onChange={e => handleLocationChange(index, 'type', e.target.value)}
                   className="update-input"
                 >
+                  <option value="" disabled>Location Type</option>
                   <option value="primary">Primary</option>
                   <option value="secondary">Secondary</option>
                   <option value="overflow">Overflow</option>
                   <option value="storage">Storage</option>
                 </select>
+                <select
+                  value={location.area_id === '' ? '' : String(location.area_id)}
+                  onChange={e => handleLocationChange(index, 'area_id', e.target.value === '' ? '' : Number(e.target.value))}
+                  className="update-input"
+                >
+                  <option value="" disabled>Select Area</option>
+                  {areas.map(area => (
+                    <option key={area.area_id} value={area.area_id}>{area.name}</option>
+                  ))}
+                </select>
+                <span className="update-area-label">
+                  {areas.find(a => a.area_id === location.area_id)?.name || ''}
+                </span>
                 <button
                   type="button"
                   onClick={() => removeLocation(index)}
@@ -191,6 +240,7 @@ export default function Update() {
               type="button"
               onClick={addLocation}
               className="update-add-btn"
+              disabled={!areas.length}
             >
               Add Location
             </button>

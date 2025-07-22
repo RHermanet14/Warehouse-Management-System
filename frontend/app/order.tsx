@@ -8,18 +8,8 @@ import { CameraView, Camera, BarcodeScanningResult, BarcodeType } from "expo-cam
 import ThemedText from '../components/ThemedText';
 import ThemedView from '../components/ThemedView';
 import ThemedTextInput from '../components/ThemedTextInput';
-import { parseLocations } from '../constants/Types';
-
-const LOCATIONS = [
-  'Garage',
-  'Pantry',
-  'Fridge',
-  'Basement',
-  'Bedroom',
-  'No',
-  'Where',
-  'Tat Two',
-];
+import { parseLocations, barcode_types } from '../constants/Types';
+import type { Location } from '../constants/Types';
 
 interface Item {
   barcode_id: string;
@@ -27,23 +17,15 @@ interface Item {
   description?: string;
   quantity: number;
   picked_quantity?: number;
-  locations?: Array<{
-    quantity: number;
-    location: string;
-    type: string;
-  }>;
-  // Keep backward compatibility for existing code
-  primary_location?: string;
-  primary_quantity?: number;
-  secondary_location?: string;
-  secondary_quantity?: number;
+  locations?: Location[];
 }
 
 export default function OrderScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme] ?? Colors.light;
   const [step, setStep] = useState<'select' | 'fulfill'>('select');
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [areas, setAreas] = useState<{ area_id: string; name: string }[]>([]); // <-- new state
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]); // stores area_id as string
   const [orderItems, setOrderItems] = useState<Item[]>([]);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -59,20 +41,34 @@ export default function OrderScreen() {
   const [flashlightEnabled, setFlashlightEnabled] = useState(false);
   const lastScannedRef = useRef<string | null>(null);
 
+  // Fetch areas from backend on mount
+  useEffect(() => {
+    const fetchAreas = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/items/areas`);
+        const data = await res.json();
+        if (Array.isArray(data)) setAreas(data);
+      } catch (err) {
+        setAreas([]);
+      }
+    };
+    fetchAreas();
+  }, []);
+
   // Location selection logic
-  const toggleLocation = (location: string) => {
+  const toggleLocation = (area_id: string) => {
     setSelectedLocations(prev =>
-      prev.includes(location)
-        ? prev.filter(l => l !== location)
-        : [...prev, location]
+      prev.includes(area_id)
+        ? prev.filter(l => l !== area_id)
+        : [...prev, area_id]
     );
   };
-  const allSelected = selectedLocations.length === LOCATIONS.length;
+  const allSelected = selectedLocations.length === areas.length;
   const handleSelectAll = () => {
     if (allSelected) {
       setSelectedLocations([]);
     } else {
-      setSelectedLocations([...LOCATIONS]);
+      setSelectedLocations(areas.map(a => a.area_id));
     }
   };
 
@@ -111,8 +107,6 @@ export default function OrderScreen() {
   };
 
   // Fulfillment logic
-  const currentItem = orderItems[currentIndex];
-  const remainingQty = currentItem ? (currentItem.quantity - (currentItem.picked_quantity || 0)) : 0;
   const picked = parseInt(pickedQty, 10) || 0;
 
   const handleSubmit = async () => {
@@ -262,18 +256,18 @@ export default function OrderScreen() {
           <Text style={styles.selectAllBtnText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
         </TouchableOpacity>
         <FlatList
-          data={LOCATIONS}
-          keyExtractor={item => item}
+          data={areas}
+          keyExtractor={item => item.area_id}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[
                 styles.locationItem,
-                selectedLocations.includes(item) && styles.selected,
+                selectedLocations.includes(item.area_id) && styles.selected,
               ]}
-              onPress={() => toggleLocation(item)}
+              onPress={() => toggleLocation(item.area_id)}
             >
-              <Text style={styles.locationText}>{item}</Text>
-              {selectedLocations.includes(item) && <Text>✓</Text>}
+              <Text style={styles.locationText}>{item.name}</Text>
+              {selectedLocations.includes(item.area_id) && <Text>✓</Text>}
             </TouchableOpacity>
           )}
         />
@@ -288,8 +282,13 @@ export default function OrderScreen() {
     );
   }
 
-  // Fulfillment UI
-  if (!currentItem || currentIndex >= orderItems.length) {
+  // Find the next incomplete item
+  const nextIncompleteIndex = orderItems.findIndex(item => (item.picked_quantity || 0) < item.quantity);
+  const allItemsFulfilled = orderItems.length > 0 && nextIncompleteIndex === -1;
+  const currentItem = nextIncompleteIndex !== -1 ? orderItems[nextIncompleteIndex] : undefined;
+  const remainingQty = currentItem ? (currentItem.quantity - (currentItem.picked_quantity || 0)) : 0;
+
+  if (allItemsFulfilled) {
     return (
       <View style={styles.container}>
         <Text style={styles.title}>All items fulfilled! Order complete.</Text>
@@ -299,13 +298,17 @@ export default function OrderScreen() {
       </View>
     );
   }
+  if (!currentItem) {
+    // If for some reason there are no incomplete items and not all fulfilled, show a fallback
+    return null;
+  }
 
-  const locations = parseLocations(currentItem?.locations);
+  const locations: Location[] = parseLocations(currentItem.locations);
 
   return (
     <ThemedView style={styles.container} scroll={true}>
       <ThemedText style={styles.title}>Order ID: {orderId}</ThemedText>
-      <ThemedText style={styles.subtitle}>Line {currentIndex + 1} of {orderItems.length}</ThemedText>
+      <ThemedText style={styles.subtitle}>Line {nextIncompleteIndex + 1} of {orderItems.length}</ThemedText>
       
               {/* Item Information */}
         <ThemedView style={styles.itemInfo}>
@@ -316,40 +319,17 @@ export default function OrderScreen() {
           
           {/* Location Information */}
           <ThemedText style={styles.locationLabel}>Locations:</ThemedText>
-          {locations.length > 0 ? (
-            locations.map((loc, index) => (
-              <View key={index} style={styles.locationRow}>
-                <ThemedText style={styles.locationText}>
-                  {loc.type.charAt(0).toUpperCase() + loc.type.slice(1)}: <ThemedText style={styles.value}>{loc.location}</ThemedText>
-                </ThemedText>
-                <ThemedText style={styles.locationQuantity}>
-                  {loc.quantity}
-                </ThemedText>
-              </View>
-            ))
-          ) : (
-            // Fallback to old format for backward compatibility
-            <>
-              <View style={styles.locationRow}>
-                <ThemedText style={styles.locationText}>
-                  Primary: <ThemedText style={styles.value}>{currentItem.primary_location || 'Not set'}</ThemedText>
-                </ThemedText>
-                <ThemedText style={styles.locationQuantity}>
-                  {currentItem.primary_quantity || 0}
-                </ThemedText>
-              </View>
-              {currentItem.secondary_location && (
-                <View style={styles.locationRow}>
-                  <ThemedText style={styles.locationText}>
-                    Secondary: <ThemedText style={styles.value}>{currentItem.secondary_location}</ThemedText>
-                  </ThemedText>
-                  <ThemedText style={styles.locationQuantity}>
-                    {currentItem.secondary_quantity || 0}
-                  </ThemedText>
-                </View>
-              )}
-            </>
-          )}
+          {locations.map((loc, index) => (
+            <View key={index} style={styles.locationRow}>
+              <ThemedText style={styles.locationText}>
+                {loc.type.charAt(0).toUpperCase() + loc.type.slice(1)}: <ThemedText style={styles.value}>{loc.bin}</ThemedText>
+                {loc.area_name ? <ThemedText style={styles.value}>  |  Area: {loc.area_name}</ThemedText> : null}
+              </ThemedText>
+              <ThemedText style={styles.locationQuantity}>
+                {loc.quantity}
+              </ThemedText>
+            </View>
+          ))}
         </ThemedView>
 
       {/* Location Barcode Input */}
@@ -410,7 +390,7 @@ export default function OrderScreen() {
           <CameraView
             onBarcodeScanned={scanningEnabled ? handleLocationBarcodeScanned : undefined}
             barcodeScannerSettings={{
-              barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8'],
+              barcodeTypes: barcode_types as BarcodeType[],
             }}
             style={StyleSheet.absoluteFillObject}
             enableTorch={flashlightEnabled}
@@ -443,7 +423,7 @@ export default function OrderScreen() {
           <CameraView
             onBarcodeScanned={scanningEnabled ? handleItemBarcodeScanned : undefined}
             barcodeScannerSettings={{
-              barcodeTypes: ['qr', 'code128', 'code39', 'ean13', 'ean8'],
+              barcodeTypes: barcode_types as BarcodeType[],
             }}
             style={StyleSheet.absoluteFillObject}
             enableTorch={flashlightEnabled}

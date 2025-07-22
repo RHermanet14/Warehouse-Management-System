@@ -109,14 +109,16 @@ export default function Search() {
                   <th>Bin</th>
                   <th>Quantity</th>
                   <th>Type</th>
+                  <th>Area</th>
                 </tr>
               </thead>
               <tbody>
                 {item.locations.map((location, index) => (
                   <tr key={index}>
-                    <td>{location.location}</td>
+                    <td>{(location as any).location || (location as any).bin}</td>
                     <td>{location.quantity}</td>
                     <td>{location.type}</td>
+                    <td>{(location as any).area_name || ''}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,6 +1,6 @@
 // In Types.ts or create a new file like components/ItemDisplay.tsx
 import React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, ScrollView } from 'react-native';
 import { Item } from '../constants/Types';
 import { parseLocations } from '../constants/Types';
 import ThemedView from './ThemedView';
@@ -12,6 +12,7 @@ interface ItemDisplayProps {
 }
 
 export const ItemDisplay: React.FC<ItemDisplayProps> = ({ item, scroll=false }) => {
+  // Always normalize locations using parseLocations
   const locations = parseLocations(item.locations);
   return (
     <ThemedView style={styles.container} scroll={scroll}>
@@ -21,20 +22,24 @@ export const ItemDisplay: React.FC<ItemDisplayProps> = ({ item, scroll=false }) 
       <ThemedText style={styles.label}>Description: <ThemedText style={styles.value}>{item.description || 'N/A'}</ThemedText></ThemedText>
       <ThemedText style={styles.label}>Total Quantity: <ThemedText style={styles.value}>{item.total_quantity}</ThemedText></ThemedText>
       {locations.length > 0 && (
-        <View style={styles.locationsTable}>
-          <View style={styles.locationsHeaderRow}>
-            <ThemedText style={[styles.locationCell, styles.headerCell]}>Bin</ThemedText>
-            <ThemedText style={[styles.locationCell, styles.headerCell]}>Quantity</ThemedText>
-            <ThemedText style={[styles.locationCell, styles.headerCell]}>Type</ThemedText>
-          </View>
-          {locations.map((loc, idx) => (
-            <View key={idx} style={styles.locationsRow}>
-              <ThemedText style={styles.locationCell}>{loc.location}</ThemedText>
-              <ThemedText style={styles.locationCell}>{loc.quantity}</ThemedText>
-              <ThemedText style={styles.locationCell}>{loc.type}</ThemedText>
-            </View>
-          ))}
-        </View>
+        <ScrollView horizontal={false} style={{ width: '100%' }}>
+          <ThemedView style={styles.locationsTable}>
+            <ThemedView style={styles.locationsHeaderRow}>
+              <ThemedText style={[styles.locationsHeaderCell, { minWidth: 50, flex: 1 }]}>Bin</ThemedText>
+              <ThemedText style={[styles.locationsHeaderCell, { minWidth: 50, flex: 1 }]}>Quantity</ThemedText>
+              <ThemedText style={[styles.locationsHeaderCell, { minWidth: 60, flex: 1 }]}>Type</ThemedText>
+              <ThemedText style={[styles.locationsHeaderCell, { minWidth: 60, flex: 1 }]}>Area</ThemedText>
+            </ThemedView>
+            {locations.map((loc, idx) => (
+              <View key={idx} style={styles.locationsRow}>
+                <ThemedText style={[styles.locationsCell, { minWidth: 50, flex: 1 }]} numberOfLines={2} ellipsizeMode="tail">{loc.bin}</ThemedText>
+                <ThemedText style={[styles.locationsCell, { minWidth: 50, flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">{loc.quantity}</ThemedText>
+                <ThemedText style={[styles.locationsCell, { minWidth: 60, flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">{loc.type}</ThemedText>
+                <ThemedText style={[styles.locationsCell, { minWidth: 60, flex: 1 }]} numberOfLines={2} ellipsizeMode="tail">{loc.area_name || ''}</ThemedText>
+              </View>
+            ))}
+          </ThemedView>
+        </ScrollView>
       )}
     </ThemedView>
   );
@@ -52,30 +57,35 @@ const styles = StyleSheet.create({
     fontWeight: 'normal',  
   },
   locationsTable: {
-    marginTop: 12,
+    marginTop: 10,
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 6,
+    borderRadius: 8,
     overflow: 'hidden',
+    width: '100%',
+    alignSelf: 'center',
   },
   locationsHeaderRow: {
     flexDirection: 'row',
-    backgroundColor: '#f2f2f2',
-    paddingVertical: 6,
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
-  headerCell: {
+  locationsHeaderCell: {
     fontWeight: 'bold',
+    fontSize: 12,
     color: '#333',
+    textAlign: 'center',
   },
   locationsRow: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderColor: '#eee',
-    paddingVertical: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  locationCell: {
-    flex: 1,
-    textAlign: 'left',
-    paddingHorizontal: 8,
+  locationsCell: {
+    fontSize: 12,
+    textAlign: 'center',
   },
 });

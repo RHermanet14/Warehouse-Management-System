@@ -69,7 +69,8 @@ router.get('/', async (req, res) => {
 // GET /orders/by-locations?locations=loc1,loc2,...
 router.get('/by-locations', async (req, res) => {
   const locationsParam = req.query.locations;
-  const selectedLocations = String(locationsParam).split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
+  // Parse area_ids as integers
+  const selectedAreaIds = String(locationsParam).split(',').map(l => parseInt(l.trim(), 10)).filter(id => !isNaN(id));
   try {
     const result = await pool.query(`
       SELECT o.order_id
@@ -82,11 +83,11 @@ router.get('/by-locations', async (req, res) => {
         EXISTS (
           SELECT 1
           FROM unnest((i).locations) AS loc
-          WHERE lower((loc).location) = ANY($1)
+          WHERE (loc).area_id = ANY($1)
         )
       )
       LIMIT 1
-    `, [selectedLocations]);
+    `, [selectedAreaIds]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'No pending orders found for selected locations' });
     }
@@ -145,7 +146,7 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
     const locations = itemRes.rows[0].item.locations;
     // locations is now a JS array
     const valid = Array.isArray(locations) && locations.some(loc => {
-      return String(loc.location).trim().toLowerCase() === String(picked_location).trim().toLowerCase();
+      return String(loc.bin).trim().toLowerCase() === String(picked_location).trim().toLowerCase();
     });
     if (!valid) {
       return res.status(400).json({ error: 'Invalid location: this item does not have the specified location.' });
@@ -172,7 +173,7 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
         SET locations = ARRAY(
           SELECT
             CASE
-              WHEN loc.location = $1 THEN ROW(loc.quantity - $2, loc.location, loc.type)::LOCATION
+              WHEN loc.bin = $1 THEN ROW(loc.quantity - $2, loc.bin, loc.type, loc.area_id)::LOCATION
               ELSE loc
             END
           FROM unnest(locations) AS loc
@@ -224,6 +225,21 @@ router.put('/:order_id/reset', async (req, res) => {
     res.status(200).json({ message: 'Order reset to pending' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to reset order', details: err });
+  }
+});
+
+// POST /orders/areas/lookup - get area names for a list of area_ids
+router.post('/areas/lookup', async (req, res) => {
+  const { area_ids } = req.body;
+  if (!Array.isArray(area_ids) || area_ids.length === 0) {
+    return res.status(400).json({ error: 'area_ids must be a non-empty array' });
+  }
+  try {
+    const result = await pool.query('SELECT area_id, name FROM area WHERE area_id = ANY($1)', [area_ids]);
+    const areaMap = Object.fromEntries(result.rows.map((a: any) => [a.area_id, a.name]));
+    res.status(200).json(areaMap);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to lookup areas', details: err });
   }
 });
 
