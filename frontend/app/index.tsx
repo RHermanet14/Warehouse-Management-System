@@ -17,8 +17,8 @@ export default function App() {
         <Link href="/order" style={styles.link}>
           <ThemedText>Fulfill Order</ThemedText>
         </Link>
-        <Link href="/profile" style={styles.link}>
-          <ThemedText>Dashboard</ThemedText>
+        <Link href="/relocate" style={styles.link}>
+          <ThemedText>Relocate</ThemedText>
         </Link>
       </ThemedView>
     </ThemedView>

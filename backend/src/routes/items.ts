@@ -93,6 +93,67 @@ router.put('/', async (req, res) => {
   }
 });
 
+// PUT /items/move-location-quantity - move quantity between locations for an item
+router.put('/move-location-quantity', async (req, res) => {
+  const { barcode_id, source_bin, dest_bin, quantity } = req.body;
+  if ( !barcode_id || !source_bin || !dest_bin || !quantity) {
+    return res.status(400).json({ error: 'barcode_id, source_bin, dest_bin, and quantity are required' });
+  }
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT row_to_json(item) as item FROM item WHERE barcode_id = $1', [barcode_id]);
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    const item = result.rows[0].item;
+    let locations = item.locations || [];
+    // Find source and destination locations by bin name (case-insensitive)
+    const srcIdx = locations.findIndex((loc: any) => String(loc.bin).trim().toLowerCase() === String(source_bin).trim().toLowerCase());
+    const destIdx = locations.findIndex((loc: any) => String(loc.bin).trim().toLowerCase() === String(dest_bin).trim().toLowerCase());
+    if (srcIdx === -1) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Source bin not found for this item' });
+    }
+    if (locations[srcIdx].quantity < quantity) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Not enough quantity at source bin' });
+    }
+    // Subtract from source
+    locations[srcIdx].quantity -= quantity;
+    // Add to destination (must exist)
+    if (destIdx === -1) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Destination bin not found for this item' });
+    } else {
+      locations[destIdx].quantity += quantity;
+    }
+    // Remove source location if quantity is now zero
+    locations = locations.filter((loc: any) => loc.quantity > 0);
+    // Update in DB
+    const toIntOrNULL = (val: any) => {
+      if (val === undefined || val === null || val === '') return null;
+      return parseInt(String(val), 10);
+    };
+    const locationsArray = locations.map((loc: any) =>
+      `ROW(${toIntOrNULL(loc.quantity)}, '${loc.bin}', '${loc.type}', ${toIntOrNULL(loc.area_id)})::LOCATION`
+    ).join(', ');
+    const updated = await client.query(
+      `UPDATE item SET locations = ARRAY[${locationsArray}] WHERE barcode_id = $1 RETURNING *`,
+      [barcode_id]
+    );
+    await client.query('COMMIT');
+    return res.status(200).json(updated.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Failed to move quantity', details: err });
+  } finally {
+    client.release();
+  }
+});
+
 // POST /items - add or update an item with provided barcode
 router.post('/', async (req, res) => {
   const { barcode_id, barcode_type, name, description, locations, total_quantity } = req.body;

@@ -5,8 +5,8 @@ import './Update.css';
 
 interface Area { area_id: number; name: string; }
 
-// Add a local type override for Location to allow area_id: number | ''
-type LocalLocation = Omit<Location, 'area_id'> & { area_id: number | '' };
+// Add a local type override for Location to allow area_id: number | '' and quantity as string
+type LocalLocation = Omit<Location, 'area_id' | 'quantity'> & { area_id: number | '', quantity: string };
 
 export default function Update() {
   const [barcodeId, setBarcodeId] = useState('');
@@ -57,10 +57,10 @@ export default function Update() {
           total_quantity: data.item.total_quantity?.toString() || '',
         });
         if (data.item.locations && Array.isArray(data.item.locations)) {
-          console.log('Fetched locations from backend:', data.item.locations);
           setLocations(data.item.locations.map((loc: any) => ({
             ...loc,
-            area_id: typeof loc.area_id === 'number' ? loc.area_id : ''
+            area_id: typeof loc.area_id === 'number' ? loc.area_id : '',
+            quantity: loc.quantity !== undefined && loc.quantity !== null ? String(loc.quantity) : ''
           })));
         } else {
           setLocations([]);
@@ -86,7 +86,7 @@ export default function Update() {
   const addLocation = () => {
     setLocations([
       ...locations,
-      { quantity: 0, bin: '', type: '', area_id: '' }
+      { quantity: '', bin: '', type: '', area_id: '' }
     ]);
   };
 
@@ -130,7 +130,7 @@ export default function Update() {
         total_quantity: form.total_quantity,
         locations: locations.filter(loc => loc.bin.trim() !== '').map(loc => ({
           ...loc,
-          quantity: parseInt(String(loc.quantity).replace(/^0+(?=\d)/, ''), 10) || 0
+          quantity: loc.quantity === '' ? 0 : parseInt(loc.quantity, 10)
         })),
       });
       setMessage('Item updated successfully!');
@@ -197,10 +197,10 @@ export default function Update() {
                   className="update-input"
                 />
                 <input
-                  type="text"
+                  type="number"
                   placeholder="Quantity"
-                  value={location.quantity === 0 ? '' : location.quantity}
-                  onChange={e => handleLocationChange(index, 'quantity', e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0)}
+                  value={location.quantity}
+                  onChange={e => handleLocationChange(index, 'quantity', e.target.value)}
                   className="update-input"
                 />
                 <select

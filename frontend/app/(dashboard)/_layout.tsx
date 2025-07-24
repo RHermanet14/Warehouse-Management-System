@@ -19,10 +19,10 @@ const DashboardLayout = () => {
         tabBarInactiveTintColor: theme.iconColor
     }}
     >
-      <Tabs.Screen name="profile" options={{title: 'Profile', tabBarIcon: ({ focused }) => (
+      <Tabs.Screen name="relocate" options={{title: 'Relocate', tabBarIcon: ({ focused }) => (
         <Ionicons
           size={24}
-          name={focused ? 'person' : 'person-outline'}
+          name={focused ? 'swap-horizontal' : 'swap-horizontal-outline'}
           color={focused ? theme.iconColorFocused : theme.iconColor}
         />
       )}}/>
