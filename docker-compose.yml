@@ -27,6 +27,17 @@ services:
     depends_on:
       - backend
 
+  desktop-frontend:
+    build:
+      context: .
+      dockerfile: desktop-frontend/Dockerfile.desktop-frontend
+    ports:
+      - "4173:4173"
+    environment:
+      - BACKEND_URL=${BACKEND_URL}
+    depends_on:
+      - backend
+
   postgres:
     image: postgres:15-alpine
     environment:

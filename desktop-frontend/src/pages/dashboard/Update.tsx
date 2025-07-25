@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Item, Location } from "../../../../frontend/constants/Types";
+import type { Item, Location } from "../../../../shared/constants/Types";
 import axios from 'axios';
 import './Update.css';
 
@@ -23,7 +23,8 @@ export default function Update() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    axios.get('/items/areas')
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+    axios.get(`${backendUrl}/items/areas`)
       .then(res => {
         if (Array.isArray(res.data)) {
           setAreas(res.data);
@@ -44,7 +45,8 @@ export default function Update() {
     setMessage('');
     setLoading(true);
     try {
-      const res = await axios.get(`/items?barcode_id=${encodeURIComponent(barcodeId)}`);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await axios.get(`${backendUrl}/items?barcode_id=${encodeURIComponent(barcodeId)}`);
       const data = res.data as { item?: Item };
       if (!data.item) {
         setError('Item not found');
@@ -123,7 +125,8 @@ export default function Update() {
       }
     }
     try {
-      await axios.put('/items', {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      await axios.put(`${backendUrl}/items`, {
         barcode_id: barcodeId,
         name: form.name,
         description: form.description,

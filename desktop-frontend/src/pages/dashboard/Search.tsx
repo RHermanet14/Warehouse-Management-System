@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Item } from "../../../../frontend/constants/Types";
+import type { Item } from "../../../../shared/constants/Types";
 import axios from 'axios';
 import './search.css';
 
@@ -21,7 +21,8 @@ export default function Search() {
     setSearched(true);
     setItem(null);
     try {
-      const res = await axios.get(`/items?barcode_id=${encodeURIComponent(barcodeId)}`);
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+      const res = await axios.get(`${backendUrl}/items?barcode_id=${encodeURIComponent(barcodeId)}`);
       const data = res.data as { item?: Item };
       if (res.status === 204 || !data.item) {
         setItem(null);
