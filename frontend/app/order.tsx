@@ -10,6 +10,7 @@ import ThemedView from '../components/ThemedView';
 import ThemedTextInput from '../components/ThemedTextInput';
 import { parseLocations, barcode_types } from '../constants/Types';
 import type { Location } from '../constants/Types';
+import BarcodeScanner from '../components/BarcodeScanner';
 
 interface Item {
   barcode_id: string;
@@ -386,68 +387,24 @@ export default function OrderScreen() {
 
       {/* Location Barcode Scanner */}
       {showLocationScanner && (
-        <View style={styles.scannerOverlay}>
-          <CameraView
-            onBarcodeScanned={scanningEnabled ? handleLocationBarcodeScanned : undefined}
-            barcodeScannerSettings={{
-              barcodeTypes: barcode_types as BarcodeType[],
-            }}
-            style={StyleSheet.absoluteFillObject}
-            enableTorch={flashlightEnabled}
-          />
-          
-          <TouchableOpacity 
-            style={styles.closeScannerButton}
-            onPress={() => setShowLocationScanner(false)}
-          >
-            <Text style={styles.closeScannerText}>✕</Text>
-          </TouchableOpacity>
-
-          {/* Flashlight Toggle Button */}
-          <TouchableOpacity 
-            style={styles.flashlightButton}
-            onPress={toggleFlashlight}
-          >
-            <Ionicons
-              size={24}
-              name={flashlightEnabled ? 'flashlight' : 'flashlight-outline'}
-              color={theme.iconColorFocused}
-            />
-          </TouchableOpacity>
-        </View>
+        <BarcodeScanner
+          onScanned={handleLocationBarcodeScanned}
+          onClose={() => setShowLocationScanner(false)}
+          flashlightEnabled={flashlightEnabled}
+          setFlashlightEnabled={setFlashlightEnabled}
+          barcodeTypes={barcode_types as any as import('expo-camera').BarcodeType[]}
+        />
       )}
 
       {/* Item Barcode Scanner */}
       {showItemScanner && (
-        <View style={styles.scannerOverlay}>
-          <CameraView
-            onBarcodeScanned={scanningEnabled ? handleItemBarcodeScanned : undefined}
-            barcodeScannerSettings={{
-              barcodeTypes: barcode_types as BarcodeType[],
-            }}
-            style={StyleSheet.absoluteFillObject}
-            enableTorch={flashlightEnabled}
-          />
-          
-          <TouchableOpacity 
-            style={styles.closeScannerButton}
-            onPress={() => setShowItemScanner(false)}
-          >
-            <Text style={styles.closeScannerText}>✕</Text>
-          </TouchableOpacity>
-
-          {/* Flashlight Toggle Button */}
-          <TouchableOpacity 
-            style={styles.flashlightButton}
-            onPress={toggleFlashlight}
-          >
-            <Ionicons
-              size={24}
-              name={flashlightEnabled ? 'flashlight' : 'flashlight-outline'}
-              color={theme.iconColorFocused}
-            />
-          </TouchableOpacity>
-        </View>
+        <BarcodeScanner
+          onScanned={handleItemBarcodeScanned}
+          onClose={() => setShowItemScanner(false)}
+          flashlightEnabled={flashlightEnabled}
+          setFlashlightEnabled={setFlashlightEnabled}
+          barcodeTypes={barcode_types as any as import('expo-camera').BarcodeType[]}
+        />
       )}
     </ThemedView>
   );
@@ -460,7 +417,6 @@ const styles = StyleSheet.create({
   label: { fontSize: 18, marginBottom: 8, fontWeight: 'bold' },
   value: { fontSize: 18, marginBottom: 8, fontWeight: 'normal' },
   itemInfo: {
-    //backgroundColor: '#f8f9fa',
     padding: 16,
     borderRadius: 8,
     marginBottom: 16,
@@ -509,7 +465,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 20,
   },
-
   button: {
     backgroundColor: '#1976d2',
     paddingVertical: 14,
@@ -574,42 +529,5 @@ const styles = StyleSheet.create({
   },
   selected: {
     backgroundColor: '#cce5ff',
-  },
-  scannerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'black',
-  },
-  closeScannerButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 12,
-    borderRadius: 25,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeScannerText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  flashlightButton: {
-    position: 'absolute',
-    top: 90,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 12,
-    borderRadius: 25,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

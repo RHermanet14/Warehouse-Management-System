@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { StyleSheet, TextInput, TouchableOpacity, View, Text, Alert } from "react-native";
+import { StyleSheet, TextInput, TouchableOpacity, View, Text, Alert, Keyboard, TouchableWithoutFeedback } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Spacer from "../../components/Spacer";
 import ThemedText from "../../components/ThemedText";
 import ThemedView from "../../components/ThemedView";
 import { barcode_types } from "../../constants/Types";
-import { inputStyles, buttonStyles, flashLightButtonStyles, heading } from "../../constants/Styles";
+import { inputStyles, heading } from "../../constants/Styles";
 import BarcodeScanner from "../../components/BarcodeScanner";
 import axios from "axios";
 import { BACKEND_URL } from "@env";
@@ -88,6 +88,7 @@ const Relocate = () => {
     };
 
     return (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <ThemedView style={styles.container}>
             {showScanner && scanningField && (
                 <BarcodeScanner
@@ -187,6 +188,7 @@ const Relocate = () => {
                 </>
             )}
         </ThemedView>
+        </TouchableWithoutFeedback>
     )
 }
 
@@ -211,11 +213,6 @@ const styles = StyleSheet.create({
     },
     buttonDisabled: {
         backgroundColor: '#aaa',
-    },
-    buttonText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 16,
     },
     moveButton: {
         backgroundColor: "#007AFF",

@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { StyleSheet, TextInput, Alert, ScrollView, View, TouchableOpacity, useColorScheme, Text} from "react-native";
-import { CameraView, Camera, BarcodeScanningResult, BarcodeType } from "expo-camera";
+import { StyleSheet, TextInput, Alert, ScrollView, View, TouchableOpacity, useColorScheme, Text, Keyboard, TouchableWithoutFeedback } from "react-native";
+import { Camera, BarcodeScanningResult } from "expo-camera";
 import axios from "axios";
 import { BACKEND_URL } from "@env";
 import { barcode_types } from "../../constants/Types";
 import { Colors } from "../../constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
 import Spacer from "../../components/Spacer";
 import ThemedText from "../../components/ThemedText";
 import ThemedView from "../../components/ThemedView";
 import ThemedButton from "../../components/ThemedButton";
-import { inputStyles, buttonStyles, flashLightButtonStyles, heading } from "../../constants/Styles";
+import { inputStyles, buttonStyles, heading } from "../../constants/Styles";
 import DropDownPicker from 'react-native-dropdown-picker';
+import BarcodeScanner from '../../components/BarcodeScanner';
 
 const Create = () => {
     const colorScheme = useColorScheme();
@@ -164,41 +164,18 @@ const Create = () => {
     if (hasPermission === false) return <ThemedText>No camera access</ThemedText>;
 
     return (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <ThemedView style={styles.container}>
-            {showScanner ? (
-                <View style={styles.scannerContainer}>
-                    <CameraView
-                        onBarcodeScanned={scanningEnabled ? handleBarcodeScanned : undefined}
-                        barcodeScannerSettings={{
-                            barcodeTypes: barcode_types as BarcodeType[],
-                        }}
-                        style={StyleSheet.absoluteFillObject}
-                        enableTorch={flashlightEnabled}
-                    />
-                    {/* Flashlight Toggle Button */}
-                    <TouchableOpacity 
-                        style={flashLightButtonStyles.primary} 
-                        onPress={toggleFlashlight}
-                    >
-                        <Ionicons
-                            size={24}
-                            name={flashlightEnabled ? 'flashlight' : 'flashlight-outline'}
-                            color={theme.iconColorFocused}
-                        />
-                    </TouchableOpacity>
-                    {/* Close Scanner Button */}
-                    <TouchableOpacity 
-                        style={styles.closeButton} 
-                        onPress={() => setShowScanner(false)}
-                    >
-                        <Ionicons
-                            size={24}
-                            name="close"
-                            color="white"
-                        />
-                    </TouchableOpacity>
-                </View>
-            ) : (
+            {showScanner && (
+                <BarcodeScanner
+                    onScanned={handleBarcodeScanned}
+                    onClose={() => setShowScanner(false)}
+                    flashlightEnabled={flashlightEnabled}
+                    setFlashlightEnabled={setFlashlightEnabled}
+                    barcodeTypes={barcode_types as any as import('expo-camera').BarcodeType[]}
+                />
+            )}
+            {!showScanner && (
                 <ScrollView style={styles.formContainer}>
                     <ThemedText title={true} style={heading.primary}>
                         Create New Item
@@ -342,6 +319,7 @@ const Create = () => {
                 </ScrollView>
             )}
         </ThemedView>
+        </TouchableWithoutFeedback>
     );
 };
 
@@ -350,10 +328,6 @@ export default Create;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    scannerContainer: {
-        flex: 1,
-        position: 'relative',
     },
     formContainer: {
         flex: 1,
@@ -364,12 +338,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         marginBottom: 10,
     },
-    subsectionTitle: {
-        fontSize: 14,
-        fontWeight: "bold",
-        marginBottom: 8,
-        marginTop: 5,
-    },
     textArea: {
         height: 80,
         paddingTop: 15,
@@ -379,16 +347,5 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderRadius: 8,
         backgroundColor: "#007AFF",
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 20,
-        right: 20,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        borderRadius: 25,
-        width: 50,
-        height: 50,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
 });

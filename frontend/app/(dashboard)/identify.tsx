@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Text, StyleSheet, Alert, TouchableOpacity, useColorScheme } from "react-native";
-import { CameraView, Camera, BarcodeScanningResult, BarcodeType } from "expo-camera";
+import { Text, StyleSheet, Alert, useColorScheme } from "react-native";
+import { Camera, BarcodeScanningResult } from "expo-camera";
 import axios from "axios";
 import { BACKEND_URL } from "@env";
 import { Item, barcode_types } from "../../constants/Types";
 import { Colors } from "../../constants/Colors";
-import { Ionicons } from "@expo/vector-icons";
 import { ItemDisplay } from "../../components/ItemDisplay";
 import ThemedView from "../../components/ThemedView";
 import ThemedText from "../../components/ThemedText";
 import ThemedButton from "../../components/ThemedButton";
-import { flashLightButtonStyles, buttonStyles} from "../../constants/Styles";
+import { buttonStyles} from "../../constants/Styles";
+import BarcodeScanner from '../../components/BarcodeScanner';
 
 export default function App() {
   const colorScheme = useColorScheme()
@@ -19,6 +19,7 @@ export default function App() {
   const [barcode, setBarcode] = useState<Item | string | null>(null);
   const [scanningEnabled, setScanningEnabled] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showScanner, setShowScanner] = useState(true);
   const [flashlightEnabled, setFlashlightEnabled] = useState(false);
   const lastScannedRef = useRef<string | null>(null);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,6 +56,7 @@ export default function App() {
       } else {
         console.log(res.data.item);
         setBarcode(res.data.item);
+        setShowScanner(false);
       }
     } catch (error: any) {
       console.log(error);
@@ -73,6 +75,7 @@ export default function App() {
                   setScanningEnabled(true);
                   setIsProcessing(false);
                   lastScannedRef.current = null;
+                  setShowScanner(true);
                 }, 500);
               },
             },
@@ -90,6 +93,7 @@ export default function App() {
     setScanningEnabled(true);
     setIsProcessing(false);
     lastScannedRef.current = null;
+    setShowScanner(true);
   };
 
   const toggleFlashlight = () => {
@@ -101,35 +105,24 @@ export default function App() {
 
   return (
     <ThemedView style={styles.container}>
-      <CameraView
-        onBarcodeScanned={scanningEnabled ? handleBarcodeScanned : undefined}
-        barcodeScannerSettings={{
-          barcodeTypes: barcode_types as BarcodeType[],
-        }}
-        style={StyleSheet.absoluteFillObject}
-        enableTorch={flashlightEnabled}
-      />
-      
-      {/* Flashlight Toggle Button */}
-      <TouchableOpacity 
-        style={flashLightButtonStyles.primary} 
-        onPress={toggleFlashlight}
-      >
-        <Ionicons
-          size={24}
-          name={flashlightEnabled ? 'flashlight' : 'flashlight-outline'}
-          color={theme.iconColorFocused}
+      {showScanner ? (
+        <BarcodeScanner
+          onScanned={handleBarcodeScanned}
+          onClose={() => {}}
+          flashlightEnabled={flashlightEnabled}
+          setFlashlightEnabled={setFlashlightEnabled}
+          barcodeTypes={barcode_types as any as import('expo-camera').BarcodeType[]}
         />
-      </TouchableOpacity>
-      
-      {barcode && typeof barcode === 'object' ? (
-        <ThemedView style={styles.barcodeContainer}>
-          <ItemDisplay item={barcode} scroll={false} />
-          <ThemedButton onPress={handleClear} style={buttonStyles.primary}>
-            <ThemedText>Scan Another</ThemedText>
-          </ThemedButton>
-        </ThemedView>
-      ) : null}
+      ) : (
+        barcode && typeof barcode === 'object' ? (
+          <ThemedView style={styles.barcodeContainer}>
+            <ItemDisplay item={barcode} scroll={false} />
+            <ThemedButton onPress={handleClear} style={buttonStyles.primary}>
+              <ThemedText>Scan Another</ThemedText>
+            </ThemedButton>
+          </ThemedView>
+        ) : null
+      )}
     </ThemedView>
   );
 }
@@ -143,11 +136,5 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
   },
-  barcodeText: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  flashlightText: {
-    fontSize: 24,
-  },
+
 });

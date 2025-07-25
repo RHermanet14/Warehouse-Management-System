@@ -63,4 +63,18 @@ router.put('/:account_id', async (req, res) => {
   }
 });
 
+// GET /employees/:account_id/exists - check if employee exists
+router.get('/:account_id/exists', async (req, res) => {
+  const { account_id } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT 1 FROM employee WHERE account_id = $1 LIMIT 1',
+      [account_id]
+    );
+    res.status(200).json({ exists: result.rows.length > 0 });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to check employee', details: err });
+  }
+});
+
 export default router; 

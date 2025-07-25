@@ -1,30 +1,23 @@
-import { StyleSheet, Pressable, Text} from 'react-native'
+import { StyleSheet } from 'react-native'
 import {Link } from 'expo-router'
 import React from 'react'
-import { Colors } from '../../constants/Colors'
 
 //Themed Components
 import ThemedView from '../../components/ThemedView'
-import Spacer from '../../components/Spacer'
 import ThemedText from '../../components/ThemedText'
-import ThemedButton from '../../components/ThemedButton'
 
 
 const login = () => {
-    const handleSubmit = () => {
-        console.log('TODO: Login')
-    }
+    
   return (
     <ThemedView style = {styles.container}>
 
-        <Spacer/>
-        <ThemedText title={true} style={styles.title}>
-            Login to Your Account
-        </ThemedText>
-
-        <ThemedButton onPress={handleSubmit} style={{}}>
-            <Text style={{color:'#f2f2f2'}}>Login</Text>
-        </ThemedButton>
+        <Link href="/order" style={styles.link}>
+          <ThemedText>Fulfill Order</ThemedText>
+        </Link>
+        <Link href="/relocate" style={styles.link}>
+          <ThemedText>Dashboard</ThemedText>
+        </Link>
     </ThemedView>
   )
 }
@@ -32,21 +25,6 @@ const login = () => {
 export default login
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: 'center'
-    },
-    title: {
-        textAlign: "center",
-        fontSize: 18,
-    },
-    btn: {
-        backgroundColor: Colors.primary,
-        padding: 15,
-        borderRadius: 5,
-    },
-    pressed: {
-        opacity: 0.8
-    }
+    container: { flex: 1, justifyContent: "center", alignItems: 'center' },
+    link: { fontSize: 20, marginVertical: 8 }
 })
