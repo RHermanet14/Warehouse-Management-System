@@ -5,13 +5,13 @@ WORKDIR /app
 # Copy package files
 COPY backend/package*.json ./
 
-# Install ALL dependencies (including dev dependencies for building)
+# Install dependencies
 RUN npm ci
 
 # Copy source code
 COPY backend/ ./
 
-# Build the TypeScript code
+# Build the application
 RUN npm run build
 
 # Expose port

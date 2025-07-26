@@ -11,7 +11,7 @@ RUN npm ci
 # Copy source code
 COPY frontend/ ./
 
-# Copy shared folder for shared constants
+# Copy shared folder for shared constants (from parent directory)
 COPY shared ../shared
 
 # Copy .env file for build-time environment variables

@@ -1,0 +1,17 @@
+# Stage 1: Build
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY desktop-frontend/package.json desktop-frontend/package-lock.json ./
+RUN npm ci
+COPY desktop-frontend/ ./
+# Copy shared folder for shared constants (from parent directory)
+COPY shared ../shared
+RUN npm run build
+
+# Stage 2: Serve static files
+FROM node:20-alpine AS runner
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=builder /app/dist ./dist
+EXPOSE 4173
+CMD ["serve", "-s", "dist", "-l", "4173"] 
