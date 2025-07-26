@@ -3,8 +3,8 @@ import { Text, StyleSheet, Alert, useColorScheme } from "react-native";
 import { Camera, BarcodeScanningResult } from "expo-camera";
 import axios from "axios";
 import { BACKEND_URL } from "@env";
-import { Item, barcode_types } from "../../constants/Types";
-import { Colors } from "../../constants/Colors";
+import { Item, barcode_types } from "../../../shared/constants/Types";
+import { Colors } from "../../../shared/constants/Colors";
 import { ItemDisplay } from "../../components/ItemDisplay";
 import ThemedView from "../../components/ThemedView";
 import ThemedText from "../../components/ThemedText";
@@ -48,14 +48,15 @@ export default function App() {
     setIsProcessing(true);
     lastScannedRef.current = data;
     try {
-      console.log(data, type);
+      //console.log(data, type);
       const res = await axios.get(`${BACKEND_URL}/items?barcode_id=${data}&barcode_type=${type}`);
       if (res.status === 204) {
         Alert.alert('Error', 'Barcode not found in database', [{text: 'Scan Again', onPress: handleClear,}]);
         return;
       } else {
-        console.log(res.data.item);
-        setBarcode(res.data.item);
+        const data = res.data as { item: Item };
+        //console.log(data.item);
+        setBarcode(data.item);
         setShowScanner(false);
       }
     } catch (error: any) {

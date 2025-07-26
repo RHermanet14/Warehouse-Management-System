@@ -2,14 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BACKEND_URL } from "@env";
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, TextInput, useColorScheme } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from '../constants/Colors';
+import { Colors } from '../../shared/constants/Colors';
 import { flashLightButtonStyles } from '../constants/Styles';
 import { CameraView, Camera, BarcodeScanningResult, BarcodeType } from "expo-camera";
 import ThemedText from '../components/ThemedText';
 import ThemedView from '../components/ThemedView';
 import ThemedTextInput from '../components/ThemedTextInput';
-import { parseLocations, barcode_types } from '../constants/Types';
-import type { Location } from '../constants/Types';
+import { parseLocations, barcode_types, Location } from '../../shared/constants/Types';
 import BarcodeScanner from '../components/BarcodeScanner';
 
 interface Item {

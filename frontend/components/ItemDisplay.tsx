@@ -1,8 +1,8 @@
 // In Types.ts or create a new file like components/ItemDisplay.tsx
 import React from 'react';
 import { Text, View, StyleSheet, ScrollView } from 'react-native';
-import { Item } from '../constants/Types';
-import { parseLocations } from '../constants/Types';
+import { Item } from '../../shared/constants/Types';
+import { parseLocations } from '../../shared/constants/Types';
 import ThemedView from './ThemedView';
 import ThemedText from './ThemedText';
 

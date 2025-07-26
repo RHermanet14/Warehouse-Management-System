@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { StyleSheet, TextInput, Alert, Text, View, ScrollView } from "react-native";
 import axios from "axios";
 import { BACKEND_URL } from "@env";
-import { Item } from "../../constants/Types";
-import type { Location } from "../../constants/Types";
+import { Item } from "../../../shared/constants/Types";
+import type { Location } from "../../../shared/constants/Types";
 import Spacer from "../../components/Spacer";
 import ThemedText from "../../components/ThemedText";
 import ThemedView from "../../components/ThemedView";
@@ -28,8 +28,9 @@ const Search = () => {
         try {
             // Try different barcode types since we don't know which one it is
             const res = await axios.get(`${BACKEND_URL}/items?barcode_id=${barcodeId}`);
-                if (res.data.item) {
-                    setItem(res.data.item);
+            const data = res.data as { item?: Item };
+                if (data.item) {
+                    setItem(data.item);
                     setIsLoading(false);
                     return;
             }

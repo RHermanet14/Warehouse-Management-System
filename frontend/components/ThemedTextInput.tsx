@@ -1,7 +1,7 @@
 import React from 'react';
 import { TextInput, TextInputProps, useColorScheme } from 'react-native';
 import { inputStyles } from '../constants/Styles';
-import { Colors } from '../constants/Colors';
+import { Colors } from '../../shared/constants/Colors';
 
 interface ThemedTextInputProps extends TextInputProps {
   value: string;

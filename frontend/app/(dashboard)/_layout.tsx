@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router"
 import { useColorScheme } from "react-native"
-import { Colors } from "../../constants/Colors"
+import { Colors } from "../../../shared/constants/Colors"
 import {Ionicons } from '@expo/vector-icons'
 const DashboardLayout = () => {
     const colorScheme = useColorScheme()

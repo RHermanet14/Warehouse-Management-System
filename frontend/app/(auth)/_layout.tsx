@@ -1,7 +1,7 @@
 import React from 'react'
 import {Stack } from 'expo-router'
 import {StatusBar, useColorScheme} from 'react-native'
-import { Colors } from '../../constants/Colors'
+import { Colors } from '../../../shared/constants/Colors'
 
 export default function AuthLayout() {
     const colorScheme = useColorScheme()

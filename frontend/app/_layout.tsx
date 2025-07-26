@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import React from 'react';
 import { useColorScheme } from 'react-native';
-import { Colors } from '../constants/Colors';
+import { Colors } from '../../shared/constants/Colors';
 
 export default function Layout() {
   const colorScheme = useColorScheme();

@@ -1,5 +1,5 @@
 import { View, ScrollView, useColorScheme } from 'react-native'
-import {Colors} from '../constants/Colors'
+import {Colors} from '../../shared/constants/Colors'
 import React from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 

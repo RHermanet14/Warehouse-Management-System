@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Spacer from "../../components/Spacer";
 import ThemedText from "../../components/ThemedText";
 import ThemedView from "../../components/ThemedView";
-import { barcode_types } from "../../constants/Types";
+import { barcode_types } from "../../../shared/constants/Types";
 import { inputStyles, heading } from "../../constants/Styles";
 import BarcodeScanner from "../../components/BarcodeScanner";
 import axios from "axios";
@@ -71,8 +71,9 @@ const Relocate = () => {
                 setDestLocation("");
                 setQuantity("");
             } else {
-                setMessage(res.data.error || "Failed to move quantity.");
-                Alert.alert("Error", res.data.error || "Failed to move quantity.");
+                const data = res.data as { error?: string };
+                setMessage(data.error || "Failed to move quantity.");
+                Alert.alert("Error", data.error || "Failed to move quantity.");
             }
         } catch (err: any) {
             if (err.response && err.response.data && err.response.data.error) {

@@ -3,8 +3,8 @@ import { StyleSheet, TextInput, Alert, ScrollView, View, TouchableOpacity, useCo
 import { Camera, BarcodeScanningResult } from "expo-camera";
 import axios from "axios";
 import { BACKEND_URL } from "@env";
-import { barcode_types } from "../../constants/Types";
-import { Colors } from "../../constants/Colors";
+import { barcode_types } from "../../../shared/constants/Types";
+import { Colors } from "../../../shared/constants/Colors";
 import Spacer from "../../components/Spacer";
 import ThemedText from "../../components/ThemedText";
 import ThemedView from "../../components/ThemedView";
@@ -80,7 +80,8 @@ const Create = () => {
     useEffect(() => {
         // Fetch areas from backend
         axios.get(`${BACKEND_URL}/items/areas`).then(res => {
-            if (Array.isArray(res.data)) setAreas(res.data);
+            const data = res.data as { area_id: string; name: string }[];
+            if (Array.isArray(data)) setAreas(data);
         });
     }, []);
 
@@ -143,7 +144,8 @@ const Create = () => {
             }
         } catch (error: any) {
             if (error.response?.status === 400) {
-                Alert.alert("Error", error.response.data.error || "Invalid data provided");
+                const errorData = error.response.data as { error?: string };
+                Alert.alert("Error", errorData.error || "Invalid data provided");
             } else {
                 Alert.alert("Error", "Failed to create item");
             }
