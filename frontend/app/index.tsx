@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, Alert, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ThemedText from '../components/ThemedText';
 import ThemedView from '../components/ThemedView';
 import ThemedButton from '../components/ThemedButton';
@@ -16,7 +17,9 @@ export default function App() {
     if (!isNaN(id) && accountId.trim() !== '' && String(id) === accountId.trim()) {
       try {
         const res = await axios.get(`${BACKEND_URL}/employees/${id}/exists`);
-        if (res.data && res.data.exists) {
+        if (res.data && (res.data as { exists: boolean }).exists) {
+          // Store employee ID in AsyncStorage for use in other screens
+          await AsyncStorage.setItem('employeeId', accountId);
           router.push('/login');
         } else {
           Alert.alert('Invalid ID', 'No employee found with that account ID.');
@@ -41,7 +44,7 @@ export default function App() {
           </ThemedText>
           <TextInput
             style={styles.input}
-            placeholder="Enter Employee Account ID"
+            placeholder=""
             value={accountId}
             onChangeText={setAccountId}
             keyboardType="numeric"

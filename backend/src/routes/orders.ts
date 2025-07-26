@@ -38,12 +38,15 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT o.order_id, o.order_date, o.status, oi.barcode_id, oi.quantity
+      SELECT o.order_id, o.order_date, o.status, oi.barcode_id, oi.quantity, oi.picked_quantity,
+             e.first_name, e.last_name,
+             CONCAT(e.first_name, ' ', e.last_name) as picked_by_name
       FROM orders o
       LEFT JOIN order_items oi ON o.order_id = oi.order_id
+      LEFT JOIN employee e ON oi.picked_by = e.account_id
       ORDER BY o.order_id DESC, oi.barcode_id
     `);
-    const ordersMap: Record<string, { order_id: number, order_date: string, status: string, items: Array<{ barcode_id: string, quantity: number }> }> = {};
+    const ordersMap: Record<string, { order_id: number, order_date: string, status: string, items: Array<{ barcode_id: string, quantity: number, picked_quantity?: number, picked_by_name?: string }> }> = {};
     for (const row of result.rows) {
       if (!ordersMap[row.order_id]) {
         ordersMap[row.order_id] = {
@@ -56,7 +59,9 @@ router.get('/', async (req, res) => {
       if (row.barcode_id) {
         ordersMap[row.order_id].items.push({
           barcode_id: row.barcode_id,
-          quantity: row.quantity
+          quantity: row.quantity,
+          picked_quantity: row.picked_quantity,
+          picked_by_name: row.picked_by_name
         });
       }
     }
@@ -109,17 +114,36 @@ router.get('/:order_id/items', async (req, res) => {
   const { order_id } = req.params;
   try {
     const result = await pool.query(`
-      SELECT row_to_json(i) as item, oi.quantity, oi.picked_quantity
+      SELECT oi.quantity, oi.picked_quantity,
+             i.barcode_id, i.name, i.description, i.total_quantity,
+             e.first_name, e.last_name,
+             CONCAT(e.first_name, ' ', e.last_name) as picked_by_name,
+             json_agg(
+               json_build_object(
+                 'quantity', loc.quantity,
+                 'bin', loc.bin,
+                 'type', loc.type,
+                 'area_id', loc.area_id
+               )
+             ) as locations
       FROM order_items oi
       JOIN item i ON oi.barcode_id = i.barcode_id
+      LEFT JOIN LATERAL unnest(i.locations) AS loc ON true
+      LEFT JOIN employee e ON oi.picked_by = e.account_id
       WHERE oi.order_id = $1
+      GROUP BY oi.quantity, oi.picked_quantity, i.barcode_id, i.name, i.description, i.total_quantity, e.first_name, e.last_name
       ORDER BY i.name
     `, [order_id]);
-    // Flatten the item fields for compatibility
+    // Return the data directly since it's already flattened
     const rows = result.rows.map(row => ({
-      ...row.item,
+      barcode_id: row.barcode_id,
+      name: row.name,
+      description: row.description,
+      locations: row.locations || [],
+      total_quantity: row.total_quantity,
       quantity: row.quantity,
-      picked_quantity: row.picked_quantity
+      picked_quantity: row.picked_quantity,
+      picked_by_name: row.picked_by_name
     }));
     res.status(200).json(rows);
   } catch (err) {
@@ -130,7 +154,7 @@ router.get('/:order_id/items', async (req, res) => {
 // PUT /orders/:order_id/items/:barcode_id - update picked_quantity for an order item
 router.put('/:order_id/items/:barcode_id', async (req, res) => {
   const { order_id, barcode_id } = req.params;
-  const { picked_quantity, picked_location } = req.body;
+  const { picked_quantity, picked_location, picked_by } = req.body;
   
   if (typeof picked_quantity !== 'number' || picked_quantity <= 0) {
     return res.status(400).json({ error: 'picked_quantity must be a positive number' });
@@ -159,10 +183,10 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
       // Update picked_quantity in order_items
       const result = await client.query(
         `UPDATE order_items
-         SET picked_quantity = picked_quantity + $1
-         WHERE order_id = $2 AND barcode_id = $3
+         SET picked_quantity = picked_quantity + $1, picked_by = $2
+         WHERE order_id = $3 AND barcode_id = $4
          RETURNING *`,
-        [picked_quantity, order_id, barcode_id]
+        [picked_quantity, picked_by, order_id, barcode_id]
       );
       if (result.rows.length === 0) {
         await client.query('ROLLBACK');

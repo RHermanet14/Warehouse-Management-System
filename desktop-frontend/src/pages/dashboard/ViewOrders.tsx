@@ -5,6 +5,8 @@ import './ViewOrders.css';
 interface OrderItem {
   barcode_id: string;
   quantity: number;
+  picked_quantity?: number;
+  picked_by_name?: string;
 }
 
 interface Order {
@@ -70,6 +72,8 @@ export default function ViewOrders() {
                     <tr>
                       <th>Barcode ID</th>
                       <th>Quantity</th>
+                      <th>Picked Quantity</th>
+                      <th>Picked By</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -77,6 +81,8 @@ export default function ViewOrders() {
                       <tr key={idx}>
                         <td>{item.barcode_id}</td>
                         <td>{item.quantity}</td>
+                        <td>{item.picked_quantity || 0}</td>
+                        <td>{item.picked_by_name || 'Not picked yet'}</td>
                       </tr>
                     ))}
                   </tbody>

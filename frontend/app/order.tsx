@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BACKEND_URL } from "@env";
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, TextInput, useColorScheme } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../shared/constants/Colors';
 import { flashLightButtonStyles } from '../constants/Styles';
 import { CameraView, Camera, BarcodeScanningResult, BarcodeType } from "expo-camera";
@@ -17,6 +18,7 @@ interface Item {
   description?: string;
   quantity: number;
   picked_quantity?: number;
+  total_quantity?: number;
   locations?: Location[];
 }
 
@@ -39,6 +41,7 @@ export default function OrderScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanningEnabled, setScanningEnabled] = useState(true);
   const [flashlightEnabled, setFlashlightEnabled] = useState(false);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
   const lastScannedRef = useRef<string | null>(null);
 
   // Fetch areas from backend on mount
@@ -53,6 +56,23 @@ export default function OrderScreen() {
       }
     };
     fetchAreas();
+  }, []);
+
+  // Retrieve employee ID on mount
+  useEffect(() => {
+    const getEmployeeId = async () => {
+      try {
+        const storedEmployeeId = await AsyncStorage.getItem('employeeId');
+        if (storedEmployeeId) {
+          setEmployeeId(storedEmployeeId);
+        } else {
+          Alert.alert('Error', 'Employee ID not found. Please log in again.');
+        }
+      } catch (err) {
+        Alert.alert('Error', 'Failed to retrieve employee ID.');
+      }
+    };
+    getEmployeeId();
   }, []);
 
   // Location selection logic
@@ -114,6 +134,10 @@ export default function OrderScreen() {
       Alert.alert('Please fill all fields');
       return;
     }
+    if (!employeeId) {
+      Alert.alert('Error', 'Employee ID not found. Please log in again.');
+      return;
+    }
     if (itemBarcode !== currentItem.barcode_id) {
       Alert.alert('Wrong item barcode!');
       return;
@@ -134,8 +158,9 @@ export default function OrderScreen() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             picked_quantity: picked,
-            picked_location: locationBarcode 
-          }),
+            picked_location: locationBarcode,
+            picked_by: parseInt(employeeId, 10)
+          })
         }
       );
       if (!response.ok) {
@@ -315,21 +340,26 @@ export default function OrderScreen() {
           <ThemedText style={styles.label}>Name: <ThemedText style={styles.value}>{currentItem.name}</ThemedText></ThemedText>
           <ThemedText style={styles.label}>Description: <ThemedText style={styles.value}>{currentItem.description || 'N/A'}</ThemedText></ThemedText>
           <ThemedText style={styles.label}>Barcode: <ThemedText style={styles.value}>{currentItem.barcode_id}</ThemedText></ThemedText>
+          <ThemedText style={styles.label}>Total Quantity: <ThemedText style={styles.value}>{currentItem.total_quantity}</ThemedText></ThemedText>
           <ThemedText style={styles.label}>To Pick: <ThemedText style={styles.value}>{remainingQty}</ThemedText></ThemedText>
           
           {/* Location Information */}
           <ThemedText style={styles.locationLabel}>Locations:</ThemedText>
-          {locations.map((loc, index) => (
-            <View key={index} style={styles.locationRow}>
-              <ThemedText style={styles.locationText}>
-                {loc.type.charAt(0).toUpperCase() + loc.type.slice(1)}: <ThemedText style={styles.value}>{loc.bin}</ThemedText>
-                {loc.area_name ? <ThemedText style={styles.value}>  |  Area: {loc.area_name}</ThemedText> : null}
-              </ThemedText>
-              <ThemedText style={styles.locationQuantity}>
-                {loc.quantity}
-              </ThemedText>
-            </View>
-          ))}
+          {locations.length > 0 ? (
+            locations.map((loc, index) => (
+              <View key={index} style={styles.locationRow}>
+                <ThemedText style={styles.locationText}>
+                  {loc.type.charAt(0).toUpperCase() + loc.type.slice(1)}: <ThemedText style={styles.value}>{loc.bin}</ThemedText>
+                  {loc.area_name ? <ThemedText style={styles.value}>  |  Area: {loc.area_name}</ThemedText> : null}
+                </ThemedText>
+                <ThemedText style={styles.locationQuantity}>
+                  {loc.quantity}
+                </ThemedText>
+              </View>
+            ))
+          ) : (
+            <ThemedText style={styles.locationText}>No locations found</ThemedText>
+          )}
         </ThemedView>
 
       {/* Location Barcode Input */}

@@ -26,3 +26,5 @@ WHERE locations IS NOT NULL;
 
 -- Eventually reset Docker database
  DROP DATABASE your_database_name;
+
+ALTER TABLE order_items ADD COLUMN picked_by INT REFERENCES employee(account_id);
