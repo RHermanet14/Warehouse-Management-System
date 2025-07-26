@@ -213,23 +213,7 @@ export default function OrderScreen() {
     }
   };
 
-  const handleCancelOrder = async () => {
-    if (orderId) {
-      try {
-        await fetch(`${BACKEND_URL}/orders/${orderId}/reset`, { method: 'PUT' });
-        // Navigate back to location selection
-        setStep('select');
-        setOrderItems([]);
-        setCurrentIndex(0);
-        setOrderId(null);
-        setLocationBarcode('');
-        setItemBarcode('');
-        setPickedQty('');
-      } catch (err) {
-        Alert.alert('Error', 'Failed to cancel order');
-      }
-    }
-  };
+
 
   // Camera permission setup
   useEffect(() => {
@@ -239,6 +223,23 @@ export default function OrderScreen() {
     };
     getCameraPermissions();
   }, []);
+
+  // Set picked_by when currentItem changes
+  useEffect(() => {
+    if (step === 'fulfill' && orderItems.length > 0 && employeeId && orderId) {
+      const nextIncompleteIndex = orderItems.findIndex(item => (item.picked_quantity || 0) < item.quantity);
+      if (nextIncompleteIndex !== -1) {
+        const currentItem = orderItems[nextIncompleteIndex];
+        fetch(`${BACKEND_URL}/orders/${orderId}/items/${currentItem.barcode_id}/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ picked_by: parseInt(employeeId, 10) })
+        }).catch(e => {
+          console.log('Failed to set picked_by:', e);
+        });
+      }
+    }
+  }, [step, orderItems, employeeId, orderId]);
 
   // Barcode scanning functions
   const handleLocationBarcodeScanned = async ({ type, data }: BarcodeScanningResult) => {
@@ -410,9 +411,7 @@ export default function OrderScreen() {
       <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
         <Text style={styles.buttonText}>Skip (Do Last)</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.cancelButton} onPress={handleCancelOrder}>
-        <Text style={styles.buttonText}>Cancel Order</Text>
-      </TouchableOpacity>
+
 
       {/* Location Barcode Scanner */}
       {showLocationScanner && (

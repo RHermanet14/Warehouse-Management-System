@@ -48,19 +48,16 @@ export default function App() {
     setIsProcessing(true);
     lastScannedRef.current = data;
     try {
-      //console.log(data, type);
       const res = await axios.get(`${BACKEND_URL}/items?barcode_id=${data}&barcode_type=${type}`);
       if (res.status === 204) {
         Alert.alert('Error', 'Barcode not found in database', [{text: 'Scan Again', onPress: handleClear,}]);
         return;
       } else {
         const data = res.data as { item: Item };
-        //console.log(data.item);
         setBarcode(data.item);
         setShowScanner(false);
       }
     } catch (error: any) {
-      console.log(error);
       if (error.response?.status === 500) {
         Alert.alert(
           'Error',

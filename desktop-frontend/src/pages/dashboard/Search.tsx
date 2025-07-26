@@ -26,9 +26,7 @@ export default function Search() {
       const data = res.data as { item?: Item };
       if (res.status === 204 || !data.item) {
         setItem(null);
-        console.log(data);
-        console.log(res);
-        console.log(res.status);
+
         setError('No item found with this barcode ID');
       } else {
         setItem(data.item);

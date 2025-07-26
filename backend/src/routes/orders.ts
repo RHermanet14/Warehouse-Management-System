@@ -235,6 +235,54 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
   }
 });
 
+// POST /orders/:order_id/items/:barcode_id/claim - claim a line item for a specific user
+router.post('/:order_id/items/:barcode_id/claim', async (req, res) => {
+  const { order_id, barcode_id } = req.params;
+  const { picked_by } = req.body;
+  
+  if (!picked_by) {
+    return res.status(400).json({ error: 'picked_by is required' });
+  }
+  
+  try {
+    // Check if this line item is already claimed by someone else
+    const currentItem = await pool.query(
+      'SELECT picked_by FROM order_items WHERE order_id = $1 AND barcode_id = $2',
+      [order_id, barcode_id]
+    );
+    
+    if (currentItem.rows.length === 0) {
+      return res.status(404).json({ error: 'Order item not found' });
+    }
+    
+    // If already claimed by someone else, return error
+    if (currentItem.rows[0].picked_by && currentItem.rows[0].picked_by !== picked_by) {
+      return res.status(409).json({ error: 'Line item already claimed by another user' });
+    }
+    
+    // If not claimed or claimed by the same user, set picked_by
+    const result = await pool.query(
+      `UPDATE order_items
+       SET picked_by = $1
+       WHERE order_id = $2 AND barcode_id = $3
+       RETURNING *`,
+      [picked_by, order_id, barcode_id]
+    );
+    
+    // Update order status to in_progress if it was pending
+    await pool.query(
+      `UPDATE orders 
+       SET status = 'in_progress' 
+       WHERE order_id = $1 AND status = 'pending'`,
+      [order_id]
+    );
+    
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to claim line item', details: err });
+  }
+});
+
 // PUT /orders/:order_id/reset - set order status back to pending
 router.put('/:order_id/reset', async (req, res) => {
   const { order_id } = req.params;
@@ -250,6 +298,63 @@ router.put('/:order_id/reset', async (req, res) => {
     res.status(200).json({ message: 'Order reset to pending' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to reset order', details: err });
+  }
+});
+
+// POST /orders/cleanup-user-progress - clean up incomplete work for a specific user
+router.post('/cleanup-user-progress', async (req, res) => {
+  const { employee_id } = req.body;
+  if (!employee_id) {
+    return res.status(400).json({ error: 'employee_id is required' });
+  }
+  try {
+    // Find all order items where this user has claimed them but not completed them
+    const result = await pool.query(`
+      SELECT oi.order_id, oi.barcode_id, oi.quantity, oi.picked_quantity, oi.picked_by
+      FROM order_items oi
+      WHERE oi.picked_by = $1 
+        AND oi.picked_quantity < oi.quantity
+    `, [employee_id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(200).json({ message: 'No incomplete work found for this user' });
+    }
+    
+    // Only reset the picked_by field, keep the picked_quantity as is
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      for (const row of result.rows) {
+        // Only reset the picked_by field, don't reset picked_quantity
+        // This preserves the fact that items were physically picked
+        await client.query(`
+          UPDATE order_items 
+          SET picked_by = NULL 
+          WHERE order_id = $1 AND barcode_id = $2
+        `, [row.order_id, row.barcode_id]);
+        
+        // Reset the order status to pending if it was in_progress
+        await client.query(`
+          UPDATE orders 
+          SET status = 'pending' 
+          WHERE order_id = $1 AND status = 'in_progress'
+        `, [row.order_id]);
+      }
+      
+      await client.query('COMMIT');
+      res.status(200).json({ 
+        message: `Cleaned up ${result.rows.length} incomplete line items for employee ${employee_id}`,
+        cleanedItems: result.rows.length
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to cleanup user progress', details: err });
   }
 });
 
