@@ -91,6 +91,8 @@ BEGIN
       barcode_id VARCHAR(32) REFERENCES item(barcode_id),
       quantity INT NOT NULL,
       picked_quantity INT NOT NULL DEFAULT 0,
+      picked_by INT REFERENCES employee(account_id),
+      completed_at TIMESTAMP DEFAULT NULL,
       PRIMARY KEY (order_id, barcode_id)
     );
 

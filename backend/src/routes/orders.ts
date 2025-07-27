@@ -192,6 +192,20 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
         await client.query('ROLLBACK');
         return res.status(404).json({ error: 'Order item not found' });
       }
+      
+      // Check if this item is now completed and set completed_at
+      const updatedItem = result.rows[0];
+      if (updatedItem.picked_quantity >= updatedItem.quantity) {
+        await client.query(
+          `UPDATE order_items 
+           SET completed_at = NOW() 
+           WHERE order_id = $1 AND barcode_id = $2`,
+          [order_id, barcode_id]
+        );
+        // Update the result to include the new completed_at
+        updatedItem.completed_at = new Date().toISOString();
+      }
+      
       // Update the correct location quantity in the locations array
       await client.query(`
         UPDATE item
@@ -223,7 +237,7 @@ router.put('/:order_id/items/:barcode_id', async (req, res) => {
         );
       }
       await client.query('COMMIT');
-      res.status(200).json(result.rows[0]);
+      res.status(200).json(updatedItem);
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -370,6 +384,42 @@ router.post('/areas/lookup', async (req, res) => {
     res.status(200).json(areaMap);
   } catch (err) {
     res.status(500).json({ error: 'Failed to lookup areas', details: err });
+  }
+});
+
+// GET /orders/employee-logs/:employee_id - get picking history for a specific employee
+router.get('/employee-logs/:employee_id', async (req, res) => {
+  const { employee_id } = req.params;
+  
+  if (!employee_id || isNaN(Number(employee_id))) {
+    return res.status(400).json({ error: 'Valid employee_id is required' });
+  }
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        oi.order_id,
+        oi.barcode_id,
+        i.name as item_name,
+        oi.quantity,
+        oi.picked_quantity,
+        oi.completed_at as completion_time,
+        CONCAT(e.first_name, ' ', e.last_name) as employee_name
+      FROM order_items oi
+      JOIN item i ON oi.barcode_id = i.barcode_id
+      JOIN employee e ON oi.picked_by = e.account_id
+      WHERE oi.picked_by = $1 
+        AND oi.picked_quantity >= oi.quantity
+      ORDER BY oi.completed_at DESC NULLS LAST
+    `, [employee_id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No picking history found for this employee' });
+    }
+    
+    res.status(200).json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch employee logs', details: err });
   }
 });
 

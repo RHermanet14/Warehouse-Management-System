@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AddOutline, Admin, Menu, Reload, Search } from '@rsuite/icons';
+import { AddOutline, Admin, Menu, PeoplesTime, Reload, Search } from '@rsuite/icons';
 import './Home.css';
 
 const dashboardPages = [
@@ -9,6 +9,7 @@ const dashboardPages = [
   { label: 'Search', path: 'search', icon: <Search /> },
   { label: 'Manage Accounts', path: 'manageaccounts', icon: <Admin /> },
   { label: 'Create Orders', path: 'createorders', icon: <AddOutline />, color: 'danger' },
+  { label: 'Employee Logs', path: 'employeelogs', icon: <PeoplesTime />}
 ];
 
 export default function Home() {

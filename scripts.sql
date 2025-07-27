@@ -28,3 +28,6 @@ WHERE locations IS NOT NULL;
  DROP DATABASE your_database_name;
 
 ALTER TABLE order_items ADD COLUMN picked_by INT REFERENCES employee(account_id);
+
+ALTER TABLE order_items 
+ADD COLUMN completed_at TIMESTAMP DEFAULT NULL;
